@@ -17,7 +17,7 @@ class SharedViewModel : ViewModel() {
         val json = sharedPreferences.getString("goals", null)
         savedGoals = if (json != null) {
             val type = object : TypeToken<List<Goal>>() {}.type
-            gson.fromJson(json, type)
+            gson.fromJson<List<Goal>>(json, type).sortedBy { it.date }
         } else {
             emptyList()
         }

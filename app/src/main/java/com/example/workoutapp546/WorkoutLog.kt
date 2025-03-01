@@ -73,7 +73,7 @@ fun WorkoutLogApp(sharedViewModel: SharedViewModel) {
         sharedViewModel.loadGoals(sharedPreferences)
     }
 
-    val currentGoal = sharedViewModel.savedGoals.find { it.date == currentDate }
+    val currentGoal = sharedViewModel.savedGoals.find { it.date == currentDate } ?: sharedViewModel.savedGoals.maxByOrNull { it.date }
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),

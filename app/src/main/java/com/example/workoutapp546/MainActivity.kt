@@ -102,6 +102,6 @@ fun LogScreen(navController: NavHostController, sharedViewModel: SharedViewModel
 
 @Composable
 fun GoalsScreen(navController: NavHostController, sharedViewModel: SharedViewModel) {
-    Goals(sharedViewModel)
+    Goals(sharedViewModel, navController)
 }
 
