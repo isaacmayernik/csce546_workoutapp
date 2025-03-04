@@ -2,6 +2,7 @@ package com.example.workoutapp546
 
 import android.content.Context
 import android.content.SharedPreferences
+import android.graphics.drawable.VectorDrawable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -9,9 +10,11 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
@@ -21,10 +24,14 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material3.Button
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -35,14 +42,19 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
+import androidx.core.content.res.ResourcesCompat
+import coil.compose.AsyncImage
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
@@ -66,11 +78,15 @@ fun WorkoutLogApp(sharedViewModel: SharedViewModel) {
     var showDatePicker by remember { mutableStateOf(false) }
     val workouts = remember { mutableStateListOf<Workout>() }
     var caloriesConsumed by remember { mutableStateOf("") }
+    val muscleStates = remember { mutableStateOf(loadMuscleState(sharedPreferences, currentDate)) }
+val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
 
     LaunchedEffect(currentDate) {
         workouts.clear()
         workouts.addAll(loadWorkouts(sharedPreferences, currentDate))
         sharedViewModel.loadGoals(sharedPreferences)
+        muscleStates.value = loadMuscleState(sharedPreferences, currentDate)
     }
 
     val currentGoal = sharedViewModel.savedGoals.find { it.date == currentDate } ?: sharedViewModel.savedGoals.maxByOrNull { it.date }
@@ -88,7 +104,8 @@ fun WorkoutLogApp(sharedViewModel: SharedViewModel) {
                     }
                 }
             )
-        }
+        },
+        snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { innerPadding ->
         Column(
             modifier = Modifier
@@ -162,96 +179,83 @@ fun WorkoutLogApp(sharedViewModel: SharedViewModel) {
                 )
             }
 
-            // Workout input
-            var workoutName by remember { mutableStateOf("") }
-            var sets by remember { mutableStateOf<List<WorkoutSet>>(emptyList()) }
-            var currentSetReps by remember { mutableStateOf("") }
+            var selectedWorkout by remember { mutableStateOf("") }
+            var selectedSets by remember { mutableIntStateOf(0) }
+            val workoutNames = workoutMuscleMap.keys.toList()
 
-            BasicTextField(
-                value = workoutName,
-                onValueChange = { workoutName = it },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 8.dp),
-                decorationBox = { innerTextField ->
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(8.dp)
-                    ) {
-                        if (workoutName.isEmpty()) {
-                            Text("Enter workout name", color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f))
-                        }
-                        innerTextField()
+            var expanded by remember { mutableStateOf(false) }
+            Box {
+                Button(
+                    onClick = { expanded = true }) { Text(selectedWorkout.ifEmpty { "Select Workout" }) }
+                DropdownMenu(
+                    expanded = expanded,
+                    onDismissRequest = { expanded = false },
+                    modifier = Modifier.heightIn(max = 200.dp)
+                ) {
+                    workoutNames.forEach { workout ->
+                        DropdownMenuItem(
+                            text = { Text(workout) },
+                            onClick = {
+                                selectedWorkout = workout
+                                expanded = false
+                            }
+                        )
                     }
                 }
-            )
-
-            // Set input
-            BasicTextField(
-                value = currentSetReps,
-                onValueChange = { currentSetReps = it },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 8.dp),
-                decorationBox = { innerTextField ->
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(8.dp)
-                    ) {
-                        if (currentSetReps.isEmpty()) {
-                            Text("Enter reps for this set", color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f))
-                        }
-                        innerTextField()
-                    }
-                }
-            )
-
-            Button(
-                onClick = {
-                    val reps = currentSetReps.toIntOrNull()
-                    if (reps != null) {
-                        sets = sets + WorkoutSet(reps)
-                        currentSetReps = ""
-                    }
-                },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("Add Set")
             }
 
-            Button(
-                onClick = {
-                    if (workoutName.isNotBlank() && sets.isNotEmpty()) {
-                        val workout = Workout(workoutName, sets)
-                        workouts.add(workout)
-                        saveWorkouts(sharedPreferences, currentDate, workouts)
-                        workoutName = ""
-                        sets = emptyList()
+            Row {
+                Button(
+                    onClick = {
+                        if (selectedSets > 0) selectedSets--
                     }
-                },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("Save Workout")
+                ) {
+                    Text("-")
+                }
+                Text("$selectedSets sets", Modifier.padding(16.dp))
+                Button(
+                    onClick = { selectedSets++ }
+                ) {
+                    Text("+")
+                }
+
+                Button(
+                    onClick = {
+                        if (selectedWorkout.isEmpty()) {
+                            // launch a pop-up if user has not selected a workout and tries saving workout
+                            scope.launch {
+                                snackbarHostState.showSnackbar("Please select a workout from the dropdown.")
+                            }
+                        } else if (selectedSets > 0) {
+                            val affectedMuscles = workoutMuscleMap[selectedWorkout] ?: listOf()
+                            val updatedMuscleStates = muscleStates.value.toMutableMap()
+                            affectedMuscles.forEach { muscle ->
+                                updatedMuscleStates[muscle] = getMuscleColor(selectedSets)
+                            }
+                            muscleStates.value = updatedMuscleStates
+                            saveMuscleState(sharedPreferences, currentDate, updatedMuscleStates)
+                        }
+                    }
+                ) {
+                    Text("Save Workout")
+                }
             }
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Workout list
-            LazyColumn {
-                items(workouts) { workout ->
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(8.dp)
-                    ) {
-                        Text(text = workout.name, style = MaterialTheme.typography.titleMedium)
-                        workout.sets.forEachIndexed { index, set ->
-                            Text(text = "Set ${index + 1}: ${set.reps} reps")
-                        }
-                    }
-                }
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .aspectRatio(1f)
+                    .padding(16.dp)
+            ) {
+                AsyncImage(
+                    model = R.drawable.blank_body,
+                    contentDescription = "Full Body Diagram",
+                    modifier = Modifier.fillMaxSize()
+                )
+
+                MuscleGroupsView(muscleStates.value)
             }
         }
 
@@ -266,6 +270,36 @@ fun WorkoutLogApp(sharedViewModel: SharedViewModel) {
             )
         }
     }
+}
+
+@Composable
+fun MuscleGroupsView(muscleStates: Map<String, Int>) {
+    AndroidView(
+        factory = { ctx ->
+            val imageView = android.widget.ImageView(ctx)
+            val drawable = ResourcesCompat.getDrawable(ctx.resources, R.drawable.muscle_groups, ctx.theme)
+
+            if (drawable is VectorDrawable) {
+                muscleStates.forEach { (muscle, color) ->
+                    drawable.setTint(color)
+                }
+            }
+            imageView.setImageDrawable(drawable)
+            imageView
+        },
+        modifier = Modifier
+            .fillMaxWidth()
+            .aspectRatio(1f),
+        update = { imageView ->
+            val drawable = ResourcesCompat.getDrawable(imageView.context.resources, R.drawable.muscle_groups, imageView.context.theme)
+            if (drawable is VectorDrawable) {
+                muscleStates.forEach { (muscle, color) ->
+                    drawable.setTint(color)
+                }
+            }
+            imageView.setImageDrawable(drawable)
+        }
+    )
 }
 
 @Composable
@@ -358,7 +392,8 @@ fun ScrollablePicker(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(4.dp)
-                    .background(color = if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
+                    .background(
+                        color = if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
                         else MaterialTheme.colorScheme.background
                     )
                     .clickable { onItemSelected(item) }
