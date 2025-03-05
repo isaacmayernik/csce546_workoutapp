@@ -285,6 +285,7 @@ fun MuscleGroupsView(muscleStates: Map<String, Int>) {
         "calf" to R.drawable.calves,
         "chest-right" to R.drawable.chest_right,
         "chest-left" to R.drawable.chest_left,
+        "deltoids-rear" to R.drawable.deltoids_rear,
         "forearm" to R.drawable.forearms,
         "glute" to R.drawable.glutes,
         "hamstring" to R.drawable.hamstring,

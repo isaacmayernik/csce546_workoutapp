@@ -40,6 +40,7 @@ val workoutMuscleMap = mapOf(
     "Pectoral fly" to listOf("chest-left", "chest-right"),
     "Plank" to listOf("ab", "rectus-abdominus", "oblique"),
     "Preacher curls" to listOf("bicep"),
+    "Rear deltoid fly" to listOf("deltoids-rear"),
     "Reverse crunch" to listOf("rectus-abdominus", "ab"),
     "Russian twists" to listOf("oblique"),
     "Seated military press" to listOf("shoulder-deltoid"),
