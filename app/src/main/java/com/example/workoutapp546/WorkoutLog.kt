@@ -181,25 +181,19 @@ fun WorkoutLogApp(sharedViewModel: SharedViewModel) {
             var selectedSets by remember { mutableIntStateOf(0) }
             val workoutNames = workoutMuscleMap.keys.toList()
 
-            var expanded by remember { mutableStateOf(false) }
-            Box {
-                Button(
-                    onClick = { expanded = true }) { Text(selectedWorkout.ifEmpty { "Select Workout" }) }
-                DropdownMenu(
-                    expanded = expanded,
-                    onDismissRequest = { expanded = false },
-                    modifier = Modifier.heightIn(max = 200.dp)
-                ) {
-                    workoutNames.forEach { workout ->
-                        DropdownMenuItem(
-                            text = { Text(workout) },
-                            onClick = {
-                                selectedWorkout = workout
-                                expanded = false
-                            }
-                        )
-                    }
-                }
+            Row (
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp),
+                horizontalArrangement = Arrangement.Center
+            ) {
+                WorkoutDropdown(
+                    selectedWorkout = selectedWorkout,
+                    onWorkoutSelected = { workout ->
+                        selectedWorkout = workout
+                    },
+                    workoutNames = workoutNames
+                )
             }
 
             Row(
@@ -326,6 +320,79 @@ fun MuscleGroupsView(muscleStates: Map<String, Int>) {
     }
 }
 
+// Dropdown for Select Workout (list of workouts from MuscleColorManager)
+@Composable
+fun WorkoutDropdown(
+    selectedWorkout: String,
+    onWorkoutSelected: (String) -> Unit,
+    workoutNames: List<String>
+) {
+    var expanded by remember { mutableStateOf(false) }
+    var searchQuery by remember { mutableStateOf("") }
+
+    val filteredWorkouts = if (searchQuery.isEmpty()) {
+        workoutNames
+    } else {
+        workoutNames.filter { it.contains(searchQuery, ignoreCase = true) }
+    }
+
+    Box {
+        Button(
+            onClick = {
+                expanded = true
+            }
+        ) {
+            Text(selectedWorkout.ifEmpty { "Select Workout" })
+        }
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+            modifier = Modifier.heightIn(max = 250.dp)
+        ) {
+            // Search bar
+            BasicTextField(
+                value = searchQuery,
+                onValueChange = { searchQuery = it },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(8.dp),
+                decorationBox = { innerTextField ->
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                    ) {
+                        if (searchQuery.isEmpty()) {
+                            Text(
+                                "Search workouts...",
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                            )
+                        }
+                        innerTextField()
+                    }
+                }
+            )
+
+            // Filtered workout list
+            if (filteredWorkouts.isEmpty()) {
+                Text("No workouts found", modifier = Modifier.padding(8.dp))
+            } else {
+                Column {
+                    filteredWorkouts.forEach { workout ->
+                        DropdownMenuItem(
+                            text = { Text(workout) },
+                            onClick = {
+                                onWorkoutSelected(workout)
+                                expanded = false
+                                searchQuery = ""
+                            }
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
 @Composable
 fun DatePickerDialog(
     onDismissRequest: () -> Unit,
@@ -347,7 +414,7 @@ fun DatePickerDialog(
                 // Year picker
                 Text(text = "Year", style = MaterialTheme.typography.titleMedium)
                 ScrollablePicker(
-                    items = (1900..2100).toList(),
+                    items = (2000..2100).toList(),
                     selectedItem = selectedYear,
                     onItemSelected = { selectedYear = it }
                 )
