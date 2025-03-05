@@ -2,7 +2,6 @@ package com.example.workoutapp546
 
 import android.content.Context
 import android.content.SharedPreferences
-import android.graphics.drawable.VectorDrawable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -46,11 +45,10 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
-import androidx.core.content.res.ResourcesCompat
 import coil.compose.AsyncImage
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
@@ -79,7 +77,7 @@ fun WorkoutLogApp(sharedViewModel: SharedViewModel) {
     val workouts = remember { mutableStateListOf<Workout>() }
     var caloriesConsumed by remember { mutableStateOf("") }
     val muscleStates = remember { mutableStateOf(loadMuscleState(sharedPreferences, currentDate)) }
-val snackbarHostState = remember { SnackbarHostState() }
+    val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
     LaunchedEffect(currentDate) {
@@ -204,7 +202,10 @@ val snackbarHostState = remember { SnackbarHostState() }
                 }
             }
 
-            Row {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceAround
+            ) {
                 Button(
                     onClick = {
                         if (selectedSets > 0) selectedSets--
@@ -274,32 +275,54 @@ val snackbarHostState = remember { SnackbarHostState() }
 
 @Composable
 fun MuscleGroupsView(muscleStates: Map<String, Int>) {
-    AndroidView(
-        factory = { ctx ->
-            val imageView = android.widget.ImageView(ctx)
-            val drawable = ResourcesCompat.getDrawable(ctx.resources, R.drawable.muscle_groups, ctx.theme)
+    val context = LocalContext.current
 
-            if (drawable is VectorDrawable) {
-                muscleStates.forEach { (muscle, color) ->
-                    drawable.setTint(color)
-                }
-            }
-            imageView.setImageDrawable(drawable)
-            imageView
-        },
+    // Map muscle names to their respective drawable resources
+    val muscleDrawableMap = mapOf(
+        "ab" to R.drawable.abs,
+        "back-lower" to R.drawable.back_lower,
+        "bicep" to R.drawable.bicep,
+        "calf" to R.drawable.calves,
+        "chest-right" to R.drawable.chest_right,
+        "chest-left" to R.drawable.chest_left,
+        "forearm" to R.drawable.forearms,
+        "glute" to R.drawable.glutes,
+        "hamstring" to R.drawable.hamstring,
+        "hip" to R.drawable.hip,
+        "oblique" to R.drawable.oblique,
+        "pronator teres" to R.drawable.pronatur_teres,
+        "rectus-abdominus" to R.drawable.rectus_abdominus,
+        "rectus-femoris" to R.drawable.rectus_femoris,
+        "shoulder-deltoid" to R. drawable.shoulder_deltoids,
+        "sternocleidomastoid" to R.drawable.sternocleidomastoid,
+        "thigh" to R.drawable.thigh,
+        "trapezius" to R.drawable.trapezius,
+        "tricep" to R.drawable.tricep,
+        "vastus-lateralis" to R.drawable.vastus_lateralis,
+        "vastus-medialis" to R.drawable.vastus_medialis,
+    )
+
+    Box(
         modifier = Modifier
             .fillMaxWidth()
-            .aspectRatio(1f),
-        update = { imageView ->
-            val drawable = ResourcesCompat.getDrawable(imageView.context.resources, R.drawable.muscle_groups, imageView.context.theme)
-            if (drawable is VectorDrawable) {
-                muscleStates.forEach { (muscle, color) ->
-                    drawable.setTint(color)
-                }
+            .aspectRatio(1f)
+    ) {
+        // Iterate through muscleStates and display each muscle group
+        muscleStates.forEach { (muscle, colorInt) ->
+            val drawableRes = muscleDrawableMap[muscle]
+            if (drawableRes != null) {
+                val composeColor = androidx.compose.ui.graphics.Color(colorInt)
+                AsyncImage(
+                    model = drawableRes,
+                    contentDescription = muscle,
+                    modifier = Modifier
+                        .fillMaxSize(),
+
+                    colorFilter = ColorFilter.tint(composeColor)
+                )
             }
-            imageView.setImageDrawable(drawable)
         }
-    )
+    }
 }
 
 @Composable
