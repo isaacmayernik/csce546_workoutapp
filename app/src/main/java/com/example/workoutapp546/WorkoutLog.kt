@@ -1,5 +1,6 @@
 package com.example.workoutapp546
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.content.SharedPreferences
 import androidx.compose.foundation.background
@@ -23,8 +24,6 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material3.Button
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -46,6 +45,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
@@ -74,6 +75,10 @@ fun WorkoutLogApp(sharedViewModel: SharedViewModel) {
     val sharedPreferences = remember { context.getSharedPreferences("WorkoutApp", Context.MODE_PRIVATE) }
     var currentDate by remember { mutableStateOf(getCurrentDate()) }
     var showDatePicker by remember { mutableStateOf(false) }
+    var showWorkoutDialog by remember { mutableStateOf(false) }
+    var selectedWorkout by remember { mutableStateOf("") }
+    var selectedSets by remember { mutableIntStateOf(0) }
+    val workoutNames by remember { mutableStateOf(workoutMuscleMap.keys.toList()) }
     val workouts = remember { mutableStateListOf<Workout>() }
     var caloriesConsumed by remember { mutableStateOf("") }
     val muscleStates = remember { mutableStateOf(loadMuscleState(sharedPreferences, currentDate)) }
@@ -177,23 +182,17 @@ fun WorkoutLogApp(sharedViewModel: SharedViewModel) {
                 )
             }
 
-            var selectedWorkout by remember { mutableStateOf("") }
-            var selectedSets by remember { mutableIntStateOf(0) }
-            val workoutNames = workoutMuscleMap.keys.toList()
-
             Row (
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(vertical = 8.dp),
                 horizontalArrangement = Arrangement.Center
             ) {
-                WorkoutDropdown(
-                    selectedWorkout = selectedWorkout,
-                    onWorkoutSelected = { workout ->
-                        selectedWorkout = workout
-                    },
-                    workoutNames = workoutNames
-                )
+                Button(
+                    onClick = { showWorkoutDialog = true }
+                ) {
+                    Text(selectedWorkout.ifEmpty { "Select Workout" })
+                }
             }
 
             Row(
@@ -264,6 +263,17 @@ fun WorkoutLogApp(sharedViewModel: SharedViewModel) {
                 }
             )
         }
+
+        if (showWorkoutDialog) {
+            WorkoutDialog(
+                selectedWorkout = selectedWorkout,
+                onWorkoutSelected = { workout ->
+                    selectedWorkout = workout
+                },
+                onDismissRequest = { showWorkoutDialog = false },
+                workoutNames = workoutNames
+            )
+        }
     }
 }
 
@@ -321,13 +331,14 @@ fun MuscleGroupsView(muscleStates: Map<String, Int>) {
 }
 
 // Dropdown for Select Workout (list of workouts from MuscleColorManager)
+@SuppressLint("ReturnFromAwaitPointerEventScope")
 @Composable
-fun WorkoutDropdown(
+fun WorkoutDialog(
     selectedWorkout: String,
     onWorkoutSelected: (String) -> Unit,
+    onDismissRequest: () -> Unit,
     workoutNames: List<String>
 ) {
-    var expanded by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
 
     val filteredWorkouts = if (searchQuery.isEmpty()) {
@@ -336,56 +347,85 @@ fun WorkoutDropdown(
         workoutNames.filter { it.contains(searchQuery, ignoreCase = true) }
     }
 
-    Box {
-        Button(
-            onClick = {
-                expanded = true
-            }
+    Dialog(onDismissRequest = onDismissRequest) {
+        Surface(
+            shape = MaterialTheme.shapes.medium,
+            modifier = Modifier.padding(16.dp),
         ) {
-            Text(selectedWorkout.ifEmpty { "Select Workout" })
-        }
-        DropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { expanded = false },
-            modifier = Modifier.heightIn(max = 250.dp)
-        ) {
-            // Search bar
-            BasicTextField(
-                value = searchQuery,
-                onValueChange = { searchQuery = it },
+            Column(
                 modifier = Modifier
+                    .padding(16.dp)
                     .fillMaxWidth()
-                    .padding(8.dp),
-                decorationBox = { innerTextField ->
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                    ) {
-                        if (searchQuery.isEmpty()) {
-                            Text(
-                                "Search workouts...",
-                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
-                            )
-                        }
-                        innerTextField()
-                    }
-                }
-            )
-
-            // Filtered workout list
-            if (filteredWorkouts.isEmpty()) {
-                Text("No workouts found", modifier = Modifier.padding(8.dp))
-            } else {
-                Column {
-                    filteredWorkouts.forEach { workout ->
-                        DropdownMenuItem(
-                            text = { Text(workout) },
-                            onClick = {
-                                onWorkoutSelected(workout)
-                                expanded = false
-                                searchQuery = ""
+            ) {
+                // Search bar
+                BasicTextField(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 8.dp),
+                    decorationBox = { innerTextField ->
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(6.dp)
+                        ) {
+                            if (searchQuery.isEmpty()) {
+                                Text(
+                                    "Search workouts...",
+                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                                )
                             }
-                        )
+                            innerTextField()
+                        }
+                    }
+                )
+
+                // Filtered workout list
+                if (filteredWorkouts.isEmpty()) {
+                    Text("No workouts found", modifier = Modifier.padding(8.dp))
+                } else {
+                    LazyColumn(
+                        modifier = Modifier.heightIn(max = 300.dp)
+                    ) {
+                        items(filteredWorkouts) { workout ->
+                            var isHovered by remember { mutableStateOf(false) }
+
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .background(
+                                        if (isHovered) {
+                                            MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
+                                        } else {
+                                            androidx.compose.ui.graphics.Color.Transparent
+                                        }
+                                    )
+                                    .pointerInput(Unit) {
+                                        awaitPointerEventScope {
+                                            while (true) {
+                                                val event = awaitPointerEvent()
+                                                when (event.type) {
+                                                    PointerEventType.Enter -> isHovered = true
+                                                    PointerEventType.Exit -> isHovered = false
+                                                    else -> Unit
+                                                }
+                                            }
+                                        }
+                                    }
+                                    .clickable {
+                                        onWorkoutSelected(workout)
+                                        onDismissRequest()
+                                    }
+                                    .padding(vertical = 4.dp)
+                            ) {
+                                Text(
+                                    text = workout,
+                                    modifier = Modifier.padding(8.dp),
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -399,46 +439,68 @@ fun DatePickerDialog(
     onDateSelected: (year: Int, month: Int, day: Int) -> Unit
 ) {
     val calendar = Calendar.getInstance()
-    var selectedYear by remember { mutableIntStateOf(calendar.get(Calendar.YEAR)) }
     var selectedMonth by remember { mutableIntStateOf(calendar.get(Calendar.MONTH)) }
     var selectedDay by remember { mutableIntStateOf(calendar.get(Calendar.DAY_OF_MONTH)) }
+    var selectedYear by remember { mutableIntStateOf(calendar.get(Calendar.YEAR)) }
 
     Dialog(onDismissRequest = onDismissRequest) {
         Surface (
-           shape = MaterialTheme.shapes.medium,
-            modifier = Modifier.padding(16.dp),
+            shape = MaterialTheme.shapes.medium,
+            modifier = Modifier
+                .padding(16.dp)
+                .width(450.dp)
+                .height(400.dp)
         ) {
             Column(
-                modifier = Modifier.padding(16.dp)
+                modifier = Modifier
+                    .padding(16.dp)
+                    .fillMaxSize()
             ) {
-                // Year picker
-                Text(text = "Year", style = MaterialTheme.typography.titleMedium)
-                ScrollablePicker(
-                    items = (2000..2100).toList(),
-                    selectedItem = selectedYear,
-                    onItemSelected = { selectedYear = it }
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Month picker
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.width(75.dp)
+                    ) {
+                        Text(text = "Month", style = MaterialTheme.typography.titleMedium)
+                        ScrollablePicker(
+                            items = (1..12).toList(),
+                            selectedItem = selectedMonth + 1,
+                            onItemSelected = { selectedMonth = it - 1 },
+                        )
+                    }
 
-                Spacer(modifier = Modifier.height(8.dp))
+                    // Day picker
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.width(75.dp)
+                    ) {
+                        Text(text = "Day", style = MaterialTheme.typography.titleMedium)
+                        val daysInMonth = getDaysInMonth(selectedYear, selectedMonth)
+                        ScrollablePicker(
+                            items = (1..daysInMonth).toList(),
+                            selectedItem = selectedDay,
+                            onItemSelected = { selectedDay = it },
+                        )
+                    }
 
-                // Month picker
-                Text(text = "Month", style = MaterialTheme.typography.titleMedium)
-                ScrollablePicker(
-                    items = (1..12).toList(),
-                    selectedItem = selectedMonth + 1,
-                    onItemSelected = { selectedMonth = it - 1 }
-                )
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                // Day picker
-                Text(text = "Day", style = MaterialTheme.typography.titleMedium)
-                val daysInMonth = getDaysInMonth(selectedYear, selectedMonth)
-                ScrollablePicker(
-                    items = (1..daysInMonth).toList(),
-                    selectedItem = selectedDay,
-                    onItemSelected = { selectedDay = it }
-                )
+                    // Year picker
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.width(75.dp)
+                    ) {
+                        Text(text = "Year", style = MaterialTheme.typography.titleMedium)
+                        ScrollablePicker(
+                            items = (2000..2100).toList(),
+                            selectedItem = selectedYear,
+                            onItemSelected = { selectedYear = it },
+                        )
+                    }
+                }
 
                 Spacer(modifier = Modifier.height(8.dp))
 
@@ -460,7 +522,7 @@ fun DatePickerDialog(
 fun ScrollablePicker(
     items: List<Int>,
     selectedItem: Int,
-    onItemSelected: (Int) -> Unit
+    onItemSelected: (Int) -> Unit,
 ) {
     val listState = rememberLazyListState()
 
@@ -472,10 +534,7 @@ fun ScrollablePicker(
     }
 
     LazyColumn(
-        state = listState,
-        modifier = Modifier
-            .height(100.dp)
-            .fillMaxWidth()
+        state = listState
     ) {
         items(items) { item ->
             val isSelected = item == selectedItem
@@ -493,7 +552,8 @@ fun ScrollablePicker(
                 Text(
                     text = item.toString(),
                     color = if (isSelected) MaterialTheme.colorScheme.primary
-                        else MaterialTheme.colorScheme.onBackground
+                        else MaterialTheme.colorScheme.onBackground,
+                    modifier = Modifier.align(Alignment.Center)
                 )
             }
         }
