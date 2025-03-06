@@ -11,7 +11,7 @@ fun getMuscleColor(sets: Int): Int {
         sets >= 3 -> Color.RED
         sets == 2 -> Color.rgb(255, 165, 0)
         sets == 1 -> Color.YELLOW
-        else -> Color.GREEN
+        else -> Color.rgb(26, 186, 0)
     }
 }
 
@@ -73,7 +73,7 @@ fun loadMuscleState(sharedPreferences: SharedPreferences, date: String): Mutable
 
     val allMuscles = workoutMuscleMap.values.flatten().toSet()
     allMuscles.forEach { muscle ->
-        muscleStates[muscle] = Color.GREEN
+        muscleStates[muscle] = Color.rgb(26, 186, 0)
     }
 
     if (json != null) {
