@@ -40,10 +40,10 @@ android {
 }
 
 dependencies {
-    implementation("androidx.navigation:navigation-compose:2.7.7")
-    implementation("com.google.code.gson:gson:2.10.1")
-    implementation("io.coil-kt:coil-compose:2.4.0")
-    implementation("androidx.vectordrawable:vectordrawable:1.1.0")
+    implementation(libs.androidx.navigation.compose)
+    implementation(libs.gson)
+    implementation(libs.coil.compose)
+    implementation(libs.androidx.vectordrawable)
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
