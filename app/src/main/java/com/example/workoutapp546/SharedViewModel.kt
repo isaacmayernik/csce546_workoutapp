@@ -12,6 +12,9 @@ class SharedViewModel : ViewModel() {
     var savedGoals by mutableStateOf<List<Goal>>(emptyList())
         private set
 
+    var isDarkMode by mutableStateOf(false)
+        private set
+
     fun loadGoals(sharedPreferences: SharedPreferences) {
         val gson = Gson()
         val json = sharedPreferences.getString("goals", null)
@@ -39,5 +42,18 @@ class SharedViewModel : ViewModel() {
             }
         }
         saveGoals(sharedPreferences, updatedGoals)
+    }
+
+    fun toggleDarkMode(enabled: Boolean, sharedPreferences: SharedPreferences) {
+        isDarkMode = enabled
+        saveDarkModeState(sharedPreferences, enabled)
+    }
+
+    fun loadDarkModeState(sharedPreferences: SharedPreferences) {
+        isDarkMode = sharedPreferences.getBoolean("dark_mode", false)
+    }
+
+    private fun saveDarkModeState(sharedPreferences: SharedPreferences, enabled: Boolean) {
+        sharedPreferences.edit().putBoolean("dark_mode", enabled).apply()
     }
 }

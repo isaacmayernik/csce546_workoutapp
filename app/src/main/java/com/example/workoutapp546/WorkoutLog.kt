@@ -44,6 +44,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
@@ -85,6 +86,9 @@ fun WorkoutLogApp(sharedViewModel: SharedViewModel) {
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
+    val textColor = MaterialTheme.colorScheme.onBackground
+    val bodyImage = if (sharedViewModel.isDarkMode) R.drawable.dm_blank_body else R.drawable.blank_body
+
     LaunchedEffect(currentDate) {
         workouts.clear()
         workouts.addAll(loadWorkouts(sharedPreferences, currentDate))
@@ -95,7 +99,8 @@ fun WorkoutLogApp(sharedViewModel: SharedViewModel) {
     val currentGoal = sharedViewModel.savedGoals.find { it.date == currentDate } ?: sharedViewModel.savedGoals.maxByOrNull { it.date }
 
     Scaffold(
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier
+            .fillMaxSize(),
         topBar = {
             TopAppBar(
                 title = {
@@ -103,7 +108,7 @@ fun WorkoutLogApp(sharedViewModel: SharedViewModel) {
                         modifier = Modifier.fillMaxWidth(),
                         contentAlignment =  Alignment.Center
                     ){
-                        Text("Workout Log - $currentDate")
+                        Text("Workout Log - $currentDate", color = textColor)
                     }
                 }
             )
@@ -244,12 +249,12 @@ fun WorkoutLogApp(sharedViewModel: SharedViewModel) {
                     .padding(16.dp)
             ) {
                 AsyncImage(
-                    model = R.drawable.blank_body,
+                    model = bodyImage,
                     contentDescription = "Full Body Diagram",
                     modifier = Modifier.fillMaxSize()
                 )
 
-                MuscleGroupsView(muscleStates.value)
+                MuscleGroupsView(muscleStates.value, sharedViewModel)
             }
         }
 
@@ -278,8 +283,10 @@ fun WorkoutLogApp(sharedViewModel: SharedViewModel) {
 }
 
 @Composable
-fun MuscleGroupsView(muscleStates: Map<String, Int>) {
+fun MuscleGroupsView(muscleStates: Map<String, Int>, sharedViewModel: SharedViewModel) {
     val context = LocalContext.current
+    val isDarkMode = sharedViewModel.isDarkMode
+    val backgroundColor = if (isDarkMode) Color.DarkGray else Color.White
 
     // Map muscle names to their respective drawable resources
     val muscleDrawableMap = mapOf(

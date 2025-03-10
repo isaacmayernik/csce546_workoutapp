@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -31,8 +32,15 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+
+        val sharedPreferences = getSharedPreferences("app_prefs", MODE_PRIVATE)
+        sharedViewModel.loadDarkModeState(sharedPreferences)
+
         setContent {
-            WorkoutApp546Theme {
+            WorkoutApp546Theme(
+                darkTheme = sharedViewModel.isDarkMode,
+                sharedViewModel = sharedViewModel,
+            ) {
                 NavigationApp(sharedViewModel)
             }
         }
@@ -52,6 +60,7 @@ fun NavigationApp(sharedViewModel: SharedViewModel) {
 sealed class Screen(val route: String, val title: String, val icon: ImageVector) {
     data object WorkoutLog : Screen("workout_log", "Workout Log", Icons.Default.Home)
     data object Goals : Screen("goals", "Goals", Icons.AutoMirrored.Filled.List)
+    data object Settings : Screen("settings", "Settings", Icons.Default.Settings)
 }
 
 @Composable
@@ -59,6 +68,7 @@ fun BottomBarNavigation(navController: NavHostController) {
     val items = listOf (
         Screen.WorkoutLog,
         Screen.Goals,
+        Screen.Settings,
     )
 
     val currentRoute = navController.currentBackStackEntryAsState().value?.destination?.route
@@ -92,6 +102,7 @@ fun NavigationGraph(navController: NavHostController, modifier: Modifier = Modif
     ) {
         composable(Screen.WorkoutLog.route) { LogScreen(navController, sharedViewModel) }
         composable(Screen.Goals.route) { GoalsScreen(navController, sharedViewModel) }
+        composable(Screen.Settings.route) { SettingsScreen(navController, sharedViewModel) }
     }
 }
 
@@ -103,5 +114,10 @@ fun LogScreen(navController: NavHostController, sharedViewModel: SharedViewModel
 @Composable
 fun GoalsScreen(navController: NavHostController, sharedViewModel: SharedViewModel) {
     Goals(sharedViewModel, navController)
+}
+
+@Composable
+fun SettingsScreen(navController: NavHostController, sharedViewModel: SharedViewModel) {
+    Settings(sharedViewModel)
 }
 
