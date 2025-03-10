@@ -2,6 +2,7 @@ package com.example.workoutapp546
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
@@ -10,12 +11,18 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.navigation.NavGraph.Companion.findStartDestination
@@ -51,7 +58,9 @@ class MainActivity : ComponentActivity() {
 fun NavigationApp(sharedViewModel: SharedViewModel) {
     val navController = rememberNavController()
     Scaffold (
-        bottomBar = { BottomBarNavigation(navController) }
+        bottomBar = {
+            BottomBarNavigation(navController, sharedViewModel)
+        }
     ) { innerPadding ->
         NavigationGraph(navController, Modifier.padding(innerPadding), sharedViewModel)
     }
@@ -64,32 +73,87 @@ sealed class Screen(val route: String, val title: String, val icon: ImageVector)
 }
 
 @Composable
-fun BottomBarNavigation(navController: NavHostController) {
-    val items = listOf (
+fun BottomBarNavigation(
+    navController: NavHostController,
+    sharedViewModel: SharedViewModel,
+) {
+    val items = listOf(
         Screen.WorkoutLog,
         Screen.Goals,
         Screen.Settings,
     )
 
     val currentRoute = navController.currentBackStackEntryAsState().value?.destination?.route
+    var showConfirmationDialog by remember { mutableStateOf(false) }
+    var targetRoute by remember { mutableStateOf<String?>(null) }
+
+    BackHandler(enabled = sharedViewModel.hasUnsavedChanges) {
+        showConfirmationDialog = true
+        targetRoute = null
+    }
+
     NavigationBar {
         items.forEach { screen ->
             NavigationBarItem(
                 selected = currentRoute == screen.route,
                 onClick = {
-                    navController.navigate(screen.route) {
-                        popUpTo(navController.graph.findStartDestination().id) {
-                            saveState = true
-                            inclusive = true
+                    val isOnCreateRoutine = currentRoute == "create_routine"
+                    val hasUnsavedChanges = sharedViewModel.hasUnsavedChanges
+
+                    if (isOnCreateRoutine && hasUnsavedChanges) {
+                        showConfirmationDialog = true
+                        targetRoute = screen.route
+                    } else {
+                        navController.navigate(screen.route) {
+                            popUpTo(navController.graph.findStartDestination().id) {
+                                saveState = true
+                                inclusive = true
+                            }
+                            launchSingleTop = true
+                            restoreState = true
                         }
-                        launchSingleTop = true
-                        restoreState = true
                     }
                 },
                 icon = { Icon(screen.icon, contentDescription = screen.title) },
                 label = { Text(screen.title) }
             )
         }
+    }
+
+    if (showConfirmationDialog) {
+        AlertDialog(
+            onDismissRequest = { showConfirmationDialog = false },
+            title = { Text("Unsaved Changes") },
+            text = { Text("You have unsaved changes. Are you sure?")},
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showConfirmationDialog = false
+                        targetRoute?.let { route ->
+                            navController.navigate(route) {
+                                popUpTo(navController.graph.findStartDestination().id) {
+                                    saveState = true
+                                    inclusive = true
+                                }
+                                launchSingleTop = true
+                                restoreState = true
+                            }
+                        } ?: run {
+                            navController.popBackStack()
+                        }
+                    }
+                ) {
+                    Text("Leave")
+                }
+            },
+            dismissButton = {
+                Button(
+                    onClick = { showConfirmationDialog = false }
+                ) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 }
 

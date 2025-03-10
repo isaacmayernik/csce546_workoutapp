@@ -18,6 +18,14 @@ class SharedViewModel : ViewModel() {
     var savedRoutines by mutableStateOf<List<Routine>>(emptyList())
         private set
 
+    private var _hasUnsavedChanges = mutableStateOf(false)
+    val hasUnsavedChanges: Boolean
+        get() = _hasUnsavedChanges.value
+
+    fun setUnsavedChanges(hasChanges: Boolean) {
+        _hasUnsavedChanges.value = hasChanges
+    }
+
     fun loadGoals(sharedPreferences: SharedPreferences) {
         val gson = Gson()
         val json = sharedPreferences.getString("goals", null)

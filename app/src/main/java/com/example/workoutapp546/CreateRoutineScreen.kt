@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
@@ -35,14 +34,9 @@ fun CreateRoutine(sharedViewModel: SharedViewModel, navController: NavHostContro
     val workoutNames = workoutMuscleMap.keys.toList()
     val selectedWorkouts = remember { mutableStateListOf<RoutineWorkout>() }
     var routineName by remember { mutableStateOf("") }
-    var showConfirmationDialog by remember { mutableStateOf(false) }
-
-    var isNavigatingAway by remember { mutableStateOf(false) }
 
     LaunchedEffect(selectedWorkouts) {
-        if (isNavigatingAway) {
-            showConfirmationDialog = true
-        }
+        sharedViewModel.setUnsavedChanges(selectedWorkouts.isNotEmpty())
     }
 
     Column(
@@ -87,7 +81,12 @@ fun CreateRoutine(sharedViewModel: SharedViewModel, navController: NavHostContro
                         modifier = Modifier.weight(1f)
                     )
                     Button(
-                        onClick = { if (sets > 0) selectedWorkouts.removeAll { it.name == workoutName } }
+                        onClick = {
+                            if (sets > 0) {
+                                selectedWorkouts.removeAll { it.name == workoutName }
+                                sharedViewModel.setUnsavedChanges(selectedWorkouts.isNotEmpty())
+                            }
+                        }
                     ) {
                         Text("-")
                     }
@@ -103,6 +102,7 @@ fun CreateRoutine(sharedViewModel: SharedViewModel, navController: NavHostContro
                             } else {
                                 selectedWorkouts.add(RoutineWorkout(workoutName, 1))
                             }
+                            sharedViewModel.setUnsavedChanges(selectedWorkouts.isNotEmpty())
                         }
                     ) {
                         Text("+")
@@ -116,6 +116,7 @@ fun CreateRoutine(sharedViewModel: SharedViewModel, navController: NavHostContro
             onClick = {
                 if (routineName.isNotEmpty() && selectedWorkouts.isNotEmpty()) {
                     sharedViewModel.addRoutine(sharedPreferences, Routine(routineName, selectedWorkouts))
+                    sharedViewModel.setUnsavedChanges(false)
                     navController.popBackStack()
                 }
             },
@@ -124,40 +125,6 @@ fun CreateRoutine(sharedViewModel: SharedViewModel, navController: NavHostContro
                 .padding(top = 16.dp)
         ) {
             Text("Save Routine")
-        }
-    }
-
-    if (showConfirmationDialog) {
-        AlertDialog(
-            onDismissRequest = { showConfirmationDialog = false },
-            title = { Text("Unsaved Changes") },
-            text = { Text("You have unsaved changes. Are you sure?") },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        showConfirmationDialog = false
-                        isNavigatingAway = false
-                        navController.popBackStack()
-                    }
-                ) {
-                    Text("Leave")
-                }
-            },
-            dismissButton = {
-                Button(
-                    onClick = { showConfirmationDialog = false }
-                ) {
-                    Text("Cancel")
-                }
-            }
-        )
-    }
-
-    LaunchedEffect(navController) {
-        navController.addOnDestinationChangedListener { _, destination, _ ->
-            if (destination.route != "create_routine") {
-                isNavigatingAway = true
-            }
         }
     }
 }
