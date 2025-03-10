@@ -5,6 +5,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.wrapContentSize
+import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -18,9 +20,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.navigation.NavHostController
 
 @Composable
-fun Settings(sharedViewModel: SharedViewModel) {
+fun Settings(sharedViewModel: SharedViewModel, navController: NavHostController) {
     val context = LocalContext.current
     val sharedPreferences = remember { context.getSharedPreferences("app_prefs", Context.MODE_PRIVATE) }
     var isDarkMode by remember { mutableStateOf(sharedViewModel.isDarkMode) }
@@ -38,6 +41,7 @@ fun Settings(sharedViewModel: SharedViewModel) {
             modifier = Modifier.padding(bottom = 16.dp)
         )
 
+        // Dark mode setting
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
@@ -55,6 +59,25 @@ fun Settings(sharedViewModel: SharedViewModel) {
                     sharedViewModel.toggleDarkMode(it, sharedPreferences)
                 }
             )
+        }
+
+        // Create routine
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                "Create a routine",
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.weight(1f)
+            )
+
+            Button(
+                onClick = { navController.navigate("create_routine") },
+                modifier = Modifier.wrapContentSize()
+            ) {
+                Text("Create")
+            }
         }
     }
 }

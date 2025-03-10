@@ -80,7 +80,7 @@ fun BottomBarNavigation(navController: NavHostController) {
                     navController.navigate(screen.route) {
                         popUpTo(navController.graph.findStartDestination().id) {
                             saveState = true
-                            inclusive = false
+                            inclusive = true
                         }
                         launchSingleTop = true
                         restoreState = true
@@ -103,6 +103,7 @@ fun NavigationGraph(navController: NavHostController, modifier: Modifier = Modif
         composable(Screen.WorkoutLog.route) { LogScreen(navController, sharedViewModel) }
         composable(Screen.Goals.route) { GoalsScreen(navController, sharedViewModel) }
         composable(Screen.Settings.route) { SettingsScreen(navController, sharedViewModel) }
+        composable("create_routine") { CreateRoutine(sharedViewModel, navController) }
     }
 }
 
@@ -118,6 +119,6 @@ fun GoalsScreen(navController: NavHostController, sharedViewModel: SharedViewMod
 
 @Composable
 fun SettingsScreen(navController: NavHostController, sharedViewModel: SharedViewModel) {
-    Settings(sharedViewModel)
+    Settings(sharedViewModel, navController)
 }
 

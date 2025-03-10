@@ -69,6 +69,16 @@ data class WorkoutSet(
     val reps: Int
 )
 
+data class Routine(
+    val name: String,
+    val workouts: List<RoutineWorkout>
+)
+
+data class RoutineWorkout(
+    val name: String,
+    val sets: Int
+)
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WorkoutLogApp(sharedViewModel: SharedViewModel) {
@@ -85,6 +95,7 @@ fun WorkoutLogApp(sharedViewModel: SharedViewModel) {
     val muscleStates = remember { mutableStateOf(loadMuscleState(sharedPreferences, currentDate)) }
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
+    var showRoutineDialog by remember { mutableStateOf(false) }
 
     val textColor = MaterialTheme.colorScheme.onBackground
     val bodyImage = if (sharedViewModel.isDarkMode) R.drawable.dm_blank_body else R.drawable.blank_body
@@ -198,6 +209,13 @@ fun WorkoutLogApp(sharedViewModel: SharedViewModel) {
                 ) {
                     Text(selectedWorkout.ifEmpty { "Select Workout" })
                 }
+                Spacer(modifier = Modifier.width(8.dp))
+
+                Button(
+                    onClick = { showRoutineDialog = true }
+                ) {
+                    Text("Use Routine")
+                }
             }
 
             Row(
@@ -279,6 +297,17 @@ fun WorkoutLogApp(sharedViewModel: SharedViewModel) {
                 workoutNames = workoutNames
             )
         }
+
+        if (showRoutineDialog) {
+            RoutineDialog(
+                routines = sharedViewModel.savedRoutines,
+                onRoutineSelected = { routine ->
+                    selectedWorkout = routine.workouts.joinToString { it.name }
+                    showRoutineDialog = false
+                },
+                onDismissRequest = { showRoutineDialog = false }
+            )
+        }
     }
 }
 
@@ -332,6 +361,43 @@ fun MuscleGroupsView(muscleStates: Map<String, Int>, sharedViewModel: SharedView
 
                     colorFilter = ColorFilter.tint(composeColor)
                 )
+            }
+        }
+    }
+}
+
+// Dropdown of routines
+@Composable
+fun RoutineDialog(
+    routines: List<Routine>,
+    onRoutineSelected: (Routine) -> Unit,
+    onDismissRequest: () -> Unit
+) {
+    Dialog(onDismissRequest = onDismissRequest) {
+        Surface(
+            shape = MaterialTheme.shapes.medium,
+            modifier = Modifier.padding(16.dp),
+        ) {
+            Column(
+                modifier = Modifier
+                    .padding(16.dp)
+                    .fillMaxWidth()
+            ) {
+                if (routines.isEmpty()) {
+                    Text("No routines found", modifier = Modifier.padding(8.dp))
+                } else {
+                    LazyColumn {
+                        items(routines) { routine ->
+                            Text(
+                                text = routine.name,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { onRoutineSelected(routine) }
+                                    .padding(8.dp)
+                            )
+                        }
+                    }
+                }
             }
         }
     }
