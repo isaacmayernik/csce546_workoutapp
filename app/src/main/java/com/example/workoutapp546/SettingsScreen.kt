@@ -19,7 +19,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 
 @Composable
@@ -33,22 +35,33 @@ fun Settings(sharedViewModel: SharedViewModel, navController: NavHostController)
     }
 
     Column(
-        modifier = Modifier.padding(16.dp)
+        modifier = Modifier
+            .padding(16.dp)
+            .fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
             text = "Settings",
-            style = MaterialTheme.typography.titleLarge,
-            modifier = Modifier.padding(bottom = 16.dp)
+            style = MaterialTheme.typography.titleLarge.copy(
+                fontSize = 32.sp,
+                fontWeight = FontWeight.Bold
+            ),
+            modifier = Modifier.padding(bottom = 24.dp)
         )
 
         // Dark mode setting
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
                 "Dark Mode",
-                style = MaterialTheme.typography.titleMedium,
+                style = MaterialTheme.typography.titleMedium.copy(
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Medium
+                ),
                 modifier = Modifier.weight(1f)
             )
 
@@ -57,18 +70,24 @@ fun Settings(sharedViewModel: SharedViewModel, navController: NavHostController)
                 onCheckedChange = {
                     isDarkMode = it
                     sharedViewModel.toggleDarkMode(it, sharedPreferences)
-                }
+                },
+                modifier = Modifier.wrapContentSize()
             )
         }
 
         // Create routine
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
                 "Create a routine",
-                style = MaterialTheme.typography.titleMedium,
+                style = MaterialTheme.typography.titleMedium.copy(
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Medium
+                ),
                 modifier = Modifier.weight(1f)
             )
 
@@ -76,7 +95,12 @@ fun Settings(sharedViewModel: SharedViewModel, navController: NavHostController)
                 onClick = { navController.navigate("create_routine") },
                 modifier = Modifier.wrapContentSize()
             ) {
-                Text("Create")
+                Text(
+                    text = "Create",
+                    style = MaterialTheme.typography.bodyLarge.copy(
+                        fontSize = 16.sp
+                    )
+                )
             }
         }
     }
