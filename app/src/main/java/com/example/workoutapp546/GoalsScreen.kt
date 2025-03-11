@@ -1,7 +1,7 @@
 package com.example.workoutapp546
 
 import android.content.Context
-import androidx.compose.foundation.background
+import android.graphics.Color
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,6 +16,7 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -27,8 +28,17 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.navigation.NavHostController
+import com.github.mikephil.charting.charts.LineChart
+import com.github.mikephil.charting.components.XAxis
+import com.github.mikephil.charting.data.Entry
+import com.github.mikephil.charting.data.LineData
+import com.github.mikephil.charting.data.LineDataSet
+import com.github.mikephil.charting.formatter.ValueFormatter
 import kotlinx.coroutines.delay
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -121,6 +131,16 @@ fun Goals(sharedViewModel: SharedViewModel, navController: NavHostController) {
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
+        Text(
+            text = "Enter in Goals!",
+            style = MaterialTheme.typography.titleLarge.copy(
+                fontSize = 32.sp,
+                fontWeight = FontWeight.Bold
+            ),
+            modifier = Modifier
+                .padding(bottom = 16.dp)
+        )
+
         if (currentGoal != null) {
             Text(
                 text = "Last Updated: ${currentGoal.lastUpdated}",
@@ -162,7 +182,8 @@ fun Goals(sharedViewModel: SharedViewModel, navController: NavHostController) {
                         }
                         innerTextField()
                     }
-                }
+                },
+                textStyle = LocalTextStyle.current.copy(color = MaterialTheme.colorScheme.onSurface)
             )
         }
 
@@ -200,7 +221,8 @@ fun Goals(sharedViewModel: SharedViewModel, navController: NavHostController) {
                         }
                         innerTextField()
                     }
-                }
+                },
+                textStyle = LocalTextStyle.current.copy(color = MaterialTheme.colorScheme.onSurface)
             )
         }
 
@@ -282,7 +304,8 @@ fun Goals(sharedViewModel: SharedViewModel, navController: NavHostController) {
                         }
                         innerTextField()
                     }
-                }
+                },
+                textStyle = LocalTextStyle.current.copy(color = MaterialTheme.colorScheme.onSurface)
             )
         }
 
@@ -298,7 +321,7 @@ fun Goals(sharedViewModel: SharedViewModel, navController: NavHostController) {
                 modifier = Modifier.weight(1f),
                 style = MaterialTheme.typography.bodyMedium
             )
-            // Calorie goal input
+            // Description input
             BasicTextField(
                 value = description,
                 onValueChange = {
@@ -320,13 +343,104 @@ fun Goals(sharedViewModel: SharedViewModel, navController: NavHostController) {
                         }
                         innerTextField()
                     }
-                }
+                },
+                textStyle = LocalTextStyle.current.copy(color = MaterialTheme.colorScheme.onSurface)
             )
         }
+
+        Spacer(modifier = Modifier.height(16.dp))
+        WeightGraph(sharedViewModel.savedGoals, sharedViewModel)
     }
 }
 
 fun getCurrentDateTime(): String {
     val dateFormat = SimpleDateFormat("yyyy--MM-dd HH:mm:ss", Locale.getDefault())
     return dateFormat.format(Date())
+}
+
+@Composable
+fun WeightGraph(goals: List<Goal>, sharedViewModel: SharedViewModel) {
+    val context = LocalContext.current
+    val isDarkMode = sharedViewModel.isDarkMode
+    val uniqueGoals = goals.distinctBy { it.date }
+
+    if (uniqueGoals.isNotEmpty()) {
+        AndroidView(
+            factory = {
+                LineChart(context).apply {
+                    description.isEnabled = false // disable desc label
+                    setTouchEnabled(false) // disable touch gestures
+                    setDrawGridBackground(false) // disable grid background
+                    isDragEnabled = false // disable dragging
+                    setScaleEnabled(true) // enable scaling
+                    setPinchZoom(false) // disable pinch zoom
+                    axisRight.isEnabled = false // turn off right y-axis
+                    xAxis.position = XAxis.XAxisPosition.BOTTOM
+
+                    val dates = uniqueGoals.map { it.date }
+                    xAxis.valueFormatter = object : ValueFormatter() {
+                        override fun getFormattedValue(value: Float): String {
+                            val index = value.toInt()
+                            return if (index < dates.size) {
+                                val date = dates[index]
+                                val dateFormat = SimpleDateFormat("MM-dd", Locale.getDefault())
+                                val parsedDate = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).parse(date)
+
+                                if (parsedDate != null) {
+                                    dateFormat.format(parsedDate)
+                                } else {
+                                    ""
+                                }
+                            } else {
+                                ""
+                            }
+                        }
+                    }
+
+                    setGraphColors(isDarkMode)
+                    updateGraphData(uniqueGoals)
+                }
+            },
+            update = { lineChart ->
+                lineChart.updateGraphData(uniqueGoals)
+            },
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(200.dp)
+        )
+    }
+}
+
+private fun LineChart.updateGraphData(goals: List<Goal>) {
+    val entries = goals.mapIndexed { index, goal ->
+        Entry(index.toFloat(), goal.currentWeight.toFloat())
+    }
+    val dataSet = LineDataSet(entries, "").apply {
+        color = Color.BLUE // line color
+        setCircleColor(Color.BLUE) // point color
+        lineWidth = 2f // line width
+        circleRadius = 3f // circle radius
+        setDrawCircleHole(false) // disable circle hole
+        valueTextSize = 10f
+    }
+    val lineData = LineData(dataSet)
+    this.data = lineData
+    invalidate()
+}
+
+private fun LineChart.setGraphColors(isDarkMode: Boolean) {
+    val textColor = if (isDarkMode) Color.WHITE else Color.BLACK
+    val gridColor = if (isDarkMode) Color.LTGRAY else Color.DKGRAY
+
+    xAxis.textColor = textColor
+    axisLeft.textColor = textColor
+    axisRight.textColor = textColor
+
+    xAxis.gridColor = gridColor
+    axisLeft.gridColor = gridColor
+    axisRight.gridColor = gridColor
+
+    legend.textColor = textColor
+
+    invalidate()
 }
