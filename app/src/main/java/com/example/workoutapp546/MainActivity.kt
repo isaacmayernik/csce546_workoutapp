@@ -42,10 +42,10 @@ class MainActivity : ComponentActivity() {
 
         val sharedPreferences = getSharedPreferences("app_prefs", MODE_PRIVATE)
         sharedViewModel.loadDarkModeState(sharedPreferences)
+        sharedViewModel.loadRoutines(sharedPreferences)
 
         setContent {
             WorkoutApp546Theme(
-                darkTheme = sharedViewModel.isDarkMode,
                 sharedViewModel = sharedViewModel,
             ) {
                 NavigationApp(sharedViewModel)
@@ -164,7 +164,7 @@ fun NavigationGraph(navController: NavHostController, modifier: Modifier = Modif
         startDestination = Screen.WorkoutLog.route,
         modifier = modifier,
     ) {
-        composable(Screen.WorkoutLog.route) { LogScreen(navController, sharedViewModel) }
+        composable(Screen.WorkoutLog.route) { LogScreen(sharedViewModel) }
         composable(Screen.Goals.route) { GoalsScreen(navController, sharedViewModel) }
         composable(Screen.Settings.route) { SettingsScreen(navController, sharedViewModel) }
         composable("create_routine") { CreateRoutine(sharedViewModel, navController) }
@@ -172,7 +172,7 @@ fun NavigationGraph(navController: NavHostController, modifier: Modifier = Modif
 }
 
 @Composable
-fun LogScreen(navController: NavHostController, sharedViewModel: SharedViewModel) {
+fun LogScreen(sharedViewModel: SharedViewModel) {
     WorkoutLogApp(sharedViewModel)
 }
 

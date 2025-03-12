@@ -38,6 +38,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -92,7 +93,7 @@ fun WorkoutLogApp(sharedViewModel: SharedViewModel) {
     val workoutNames by remember { mutableStateOf(workoutMuscleMap.keys.toList()) }
     val workouts = remember { mutableStateListOf<Workout>() }
     var caloriesConsumed by remember { mutableStateOf("") }
-    val muscleStates = remember { mutableStateOf(loadMuscleState(sharedPreferences, currentDate)) }
+    val muscleStates = remember { mutableStateMapOf<String, Int>() }
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     var showRoutineDialog by remember { mutableStateOf(false) }
@@ -104,7 +105,8 @@ fun WorkoutLogApp(sharedViewModel: SharedViewModel) {
         workouts.clear()
         workouts.addAll(loadWorkouts(sharedPreferences, currentDate))
         sharedViewModel.loadGoals(sharedPreferences)
-        muscleStates.value = loadMuscleState(sharedPreferences, currentDate)
+        muscleStates.clear()
+        muscleStates.putAll(loadMuscleState(sharedPreferences, currentDate))
     }
 
     val currentGoal = sharedViewModel.savedGoals.find { it.date == currentDate } ?: sharedViewModel.savedGoals.maxByOrNull { it.date }
@@ -245,11 +247,12 @@ fun WorkoutLogApp(sharedViewModel: SharedViewModel) {
                             }
                         } else if (selectedSets > 0) {
                             val affectedMuscles = workoutMuscleMap[selectedWorkout] ?: listOf()
-                            val updatedMuscleStates = muscleStates.value.toMutableMap()
+                            val updatedMuscleStates = muscleStates.toMutableMap()
                             affectedMuscles.forEach { muscle ->
                                 updatedMuscleStates[muscle] = getMuscleColor(selectedSets)
                             }
-                            muscleStates.value = updatedMuscleStates
+                            muscleStates.clear()
+                            muscleStates.putAll(updatedMuscleStates)
                             saveMuscleState(sharedPreferences, currentDate, updatedMuscleStates)
                         }
                     }
@@ -272,7 +275,7 @@ fun WorkoutLogApp(sharedViewModel: SharedViewModel) {
                     modifier = Modifier.fillMaxSize()
                 )
 
-                MuscleGroupsView(muscleStates.value, sharedViewModel)
+                MuscleGroupsView(muscleStates)
             }
         }
 
@@ -312,11 +315,7 @@ fun WorkoutLogApp(sharedViewModel: SharedViewModel) {
 }
 
 @Composable
-fun MuscleGroupsView(muscleStates: Map<String, Int>, sharedViewModel: SharedViewModel) {
-    val context = LocalContext.current
-    val isDarkMode = sharedViewModel.isDarkMode
-    val backgroundColor = if (isDarkMode) Color.DarkGray else Color.White
-
+fun MuscleGroupsView(muscleStates: Map<String, Int>) {
     // Map muscle names to their respective drawable resources
     val muscleDrawableMap = mapOf(
         "ab" to R.drawable.abs,
@@ -352,7 +351,7 @@ fun MuscleGroupsView(muscleStates: Map<String, Int>, sharedViewModel: SharedView
         muscleStates.forEach { (muscle, colorInt) ->
             val drawableRes = muscleDrawableMap[muscle]
             if (drawableRes != null) {
-                val composeColor = androidx.compose.ui.graphics.Color(colorInt)
+                val composeColor = Color(colorInt)
                 AsyncImage(
                     model = drawableRes,
                     contentDescription = muscle,
@@ -471,7 +470,7 @@ fun WorkoutDialog(
                                         if (isHovered) {
                                             MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
                                         } else {
-                                            androidx.compose.ui.graphics.Color.Transparent
+                                            Color.Transparent
                                         }
                                     )
                                     .pointerInput(Unit) {

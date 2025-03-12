@@ -2,6 +2,7 @@ package com.example.workoutapp546
 
 import android.content.SharedPreferences
 import android.graphics.Color
+import androidx.compose.runtime.mutableStateMapOf
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 
@@ -69,7 +70,7 @@ fun saveMuscleState(sharedPreferences: SharedPreferences, date: String, muscleSt
 fun loadMuscleState(sharedPreferences: SharedPreferences, date: String): MutableMap<String, Int> {
     val gson = Gson()
     val json = sharedPreferences.getString("muscle_state_$date", null)
-    val muscleStates = mutableMapOf<String, Int>()
+    val muscleStates = mutableStateMapOf<String, Int>()
 
     val allMuscles = workoutMuscleMap.values.flatten().toSet()
     allMuscles.forEach { muscle ->

@@ -73,13 +73,13 @@ class SharedViewModel : ViewModel() {
         val json = sharedPreferences.getString("routines", null)
         savedRoutines = if (json != null) {
             val type = object : TypeToken<List<Routine>>() {}.type
-            gson.fromJson<List<Routine>>(json, type)
+            gson.fromJson(json, type)
         } else {
             emptyList()
         }
     }
 
-    fun saveRoutines(sharedPreferences: SharedPreferences, routines: List<Routine>) {
+    private fun saveRoutines(sharedPreferences: SharedPreferences, routines: List<Routine>) {
         val gson = Gson()
         val json = gson.toJson(routines)
         sharedPreferences.edit().putString("routines", json).apply()
