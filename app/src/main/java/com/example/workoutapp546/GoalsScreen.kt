@@ -372,7 +372,7 @@ fun Goals(sharedViewModel: SharedViewModel, navController: NavHostController) {
 }
 
 fun getCurrentDateTime(): String {
-    val dateFormat = SimpleDateFormat("yyyy--MM-dd HH:mm:ss", Locale.getDefault())
+    val dateFormat = SimpleDateFormat("M-dd-yyyy HH:mm:ss", Locale.getDefault())
     return dateFormat.format(Date())
 }
 
@@ -403,8 +403,8 @@ fun WeightGraph(goals: List<Goal>, sharedViewModel: SharedViewModel) {
                             val index = value.toInt()
                             return if (index < uniqueGoals.size) {
                                 val date = uniqueGoals[index].date
-                                val dateFormat = SimpleDateFormat("MM-dd", Locale.getDefault())
-                                val parsedDate = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).parse(date)
+                                val dateFormat = SimpleDateFormat("M-dd", Locale.getDefault())
+                                val parsedDate = SimpleDateFormat("M-dd-yyyy", Locale.getDefault()).parse(date)
 
                                 if (parsedDate != null) {
                                     dateFormat.format(parsedDate)

@@ -41,7 +41,7 @@ class SharedViewModel : ViewModel() {
         val gson = Gson()
         val json = gson.toJson(goals)
         sharedPreferences.edit().putString("goals", json).apply()
-        savedGoals = goals
+        savedGoals = goals.distinctBy { it.date } // no duplicate dates
     }
 
     fun updateCaloriesConsumed(sharedPreferences: SharedPreferences, date: String, calories: Int) {

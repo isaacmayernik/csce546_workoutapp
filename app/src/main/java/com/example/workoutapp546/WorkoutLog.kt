@@ -668,17 +668,17 @@ fun getDaysInMonth(year: Int, month: Int): Int {
 fun formatDate(year: Int, month: Int, day: Int): String {
     val calendar = Calendar.getInstance()
     calendar.set(year, month, day)
-    val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+    val dateFormat = SimpleDateFormat("yyyy-M-dd", Locale.getDefault())
     return dateFormat.format(calendar.time)
 }
 
 fun getCurrentDate(): String {
-    val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+    val dateFormat = SimpleDateFormat("M-dd-yyyy", Locale.getDefault())
     return dateFormat.format(Date())
 }
 
 fun getPreviousDate(currentDate: String): String {
-    val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+    val dateFormat = SimpleDateFormat("yyyy-M-dd", Locale.getDefault())
     val calendar = Calendar.getInstance()
     calendar.time = dateFormat.parse(currentDate)!!
     calendar.add(Calendar.DAY_OF_YEAR, -1)
@@ -686,7 +686,7 @@ fun getPreviousDate(currentDate: String): String {
 }
 
 fun getNextDate(currentDate: String): String {
-    val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+    val dateFormat = SimpleDateFormat("yyyy-M-dd", Locale.getDefault())
     val calendar = Calendar.getInstance()
     calendar.time = dateFormat.parse(currentDate)!!
     calendar.add(Calendar.DAY_OF_YEAR, 1)
