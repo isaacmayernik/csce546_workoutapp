@@ -1,18 +1,19 @@
 package com.example.workoutapp546
 
 import android.content.SharedPreferences
-import android.graphics.Color
 import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 
 // define color level based on number of sets
-fun getMuscleColor(sets: Int): Int {
+fun getMuscleColor(sets: Int): Color {
     return when {
-        sets >= 3 -> Color.RED
-        sets == 2 -> Color.rgb(255, 165, 0)
-        sets == 1 -> Color.YELLOW
-        else -> Color.rgb(26, 186, 0)
+        sets >= 3 -> Color.Red
+        sets == 2 -> Color(0xFFFFA500)
+        sets == 1 -> Color.Yellow
+        else -> Color(0xFF1ABA00)
     }
 }
 
@@ -61,27 +62,28 @@ val workoutMuscleMap = mapOf(
     "Wrist curls" to listOf("forearm")
 )
 
-fun saveMuscleState(sharedPreferences: SharedPreferences, date: String, muscleStates: Map<String, Int>) {
+fun saveMuscleState(sharedPreferences: SharedPreferences, date: String, muscleStates: Map<String, Color>) {
     val gson = Gson()
-    val json = gson.toJson(muscleStates)
+    val colorMap = muscleStates.mapValues { it.value.toArgb() }
+    val json = gson.toJson(colorMap)
     sharedPreferences.edit().putString("muscle_state_$date", json).apply()
 }
 
-fun loadMuscleState(sharedPreferences: SharedPreferences, date: String): MutableMap<String, Int> {
+fun loadMuscleState(sharedPreferences: SharedPreferences, date: String): MutableMap<String, Color> {
     val gson = Gson()
     val json = sharedPreferences.getString("muscle_state_$date", null)
-    val muscleStates = mutableStateMapOf<String, Int>()
+    val muscleStates = mutableStateMapOf<String, Color>()
 
     val allMuscles = workoutMuscleMap.values.flatten().toSet()
     allMuscles.forEach { muscle ->
-        muscleStates[muscle] = Color.rgb(26, 186, 0)
+        muscleStates[muscle] = Color(0xFF1ABA00)
     }
 
     if (json != null) {
         val type = object : TypeToken<Map<String, Int>>() {}.type
         val savedStates: Map<String, Int> = gson.fromJson(json, type)
-        savedStates.forEach { (muscle, color) ->
-            muscleStates[muscle] = color
+        savedStates.forEach { (muscle, colorInt) ->
+            muscleStates[muscle] = Color(colorInt)
         }
     }
 

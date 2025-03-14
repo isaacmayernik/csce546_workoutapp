@@ -21,6 +21,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material3.Button
@@ -50,7 +51,10 @@ import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import coil.compose.AsyncImage
 import com.google.gson.Gson
@@ -93,12 +97,11 @@ fun WorkoutLogApp(sharedViewModel: SharedViewModel) {
     val workoutNames by remember { mutableStateOf(workoutMuscleMap.keys.toList()) }
     val workouts = remember { mutableStateListOf<Workout>() }
     var caloriesConsumed by remember { mutableStateOf("") }
-    val muscleStates = remember { mutableStateMapOf<String, Int>() }
+    val muscleStates = remember { mutableStateMapOf<String, Color>() }
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     var showRoutineDialog by remember { mutableStateOf(false) }
 
-    val textColor = MaterialTheme.colorScheme.onBackground
     val bodyImage = if (sharedViewModel.isDarkMode) R.drawable.dm_blank_body else R.drawable.blank_body
 
     LaunchedEffect(currentDate) {
@@ -121,7 +124,15 @@ fun WorkoutLogApp(sharedViewModel: SharedViewModel) {
                         modifier = Modifier.fillMaxWidth(),
                         contentAlignment =  Alignment.Center
                     ){
-                        Text("Workout Log - $currentDate", color = textColor)
+                        Text(
+                            text = "Workout Log: $currentDate",
+                            style = MaterialTheme.typography.titleLarge.copy(
+                                fontSize = 26.sp,
+                                fontWeight = FontWeight.Bold
+                            ),
+                            modifier = Modifier
+                                .padding(bottom = 16.dp)
+                        )
                     }
                 }
             )
@@ -159,45 +170,61 @@ fun WorkoutLogApp(sharedViewModel: SharedViewModel) {
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Calories consumed input
-            BasicTextField(
-                value = caloriesConsumed,
-                onValueChange = { caloriesConsumed = it },
+            Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(bottom = 8.dp),
-                decorationBox = { innerTextField ->
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(8.dp)
-                    ) {
-                        if (caloriesConsumed.isEmpty()) {
-                            Text("Enter calories consumed today", color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f))
-                        }
-                        innerTextField()
-                    }
-                }
-            )
-
-            Button(
-                onClick = {
-                    val calories = caloriesConsumed.toIntOrNull()
-                    if (calories != null) {
-                        sharedViewModel.updateCaloriesConsumed(sharedPreferences, currentDate, calories)
-                        caloriesConsumed = ""
-                    }
-                },
-                modifier = Modifier.fillMaxWidth()
+                    .padding(vertical = 8.dp),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("Save Calories")
-            }
-            // Display calories left for today
-            if (currentGoal != null) {
-                Text(
-                    text = "Calories Left: ${currentGoal.calorieGoal - currentGoal.caloriesConsumed} cal",
-                    style = MaterialTheme.typography.titleMedium
+                // Calories consumed input
+                BasicTextField(
+                    value = caloriesConsumed,
+                    onValueChange = { caloriesConsumed = it },
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(end = 8.dp),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    decorationBox = { innerTextField ->
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(8.dp)
+                        ) {
+                            if (caloriesConsumed.isEmpty()) {
+                                Text(
+                                    text = "Enter calories consumed today",
+                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                                    fontSize = 12.sp
+                                )
+                            }
+                            innerTextField()
+                        }
+                    }
                 )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Save calories button
+                Button(
+                    onClick = {
+                        val calories = caloriesConsumed.toIntOrNull()
+                        if (calories != null) {
+                            sharedViewModel.updateCaloriesConsumed(sharedPreferences, currentDate, calories)
+                            caloriesConsumed = ""
+                        }
+                    },
+                ) {
+                    Text("Save Calories")
+                }
+
+                // Display calories left for today
+                if (currentGoal != null) {
+                    Text(
+                        text = "Calories Left: ${currentGoal.calorieGoal - currentGoal.caloriesConsumed} cal",
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                }
             }
 
             Row (
@@ -249,7 +276,17 @@ fun WorkoutLogApp(sharedViewModel: SharedViewModel) {
                             val affectedMuscles = workoutMuscleMap[selectedWorkout] ?: listOf()
                             val updatedMuscleStates = muscleStates.toMutableMap()
                             affectedMuscles.forEach { muscle ->
-                                updatedMuscleStates[muscle] = getMuscleColor(selectedSets)
+                                val currentSets = updatedMuscleStates[muscle]?.let { color ->
+                                    when (color) {
+                                        Color.Red -> 3
+                                        Color(0xFFFFA500) -> 2
+                                        Color.Yellow -> 1
+                                        else -> 0
+                                    }
+                                }?: 0
+                                val totalSets = currentSets + selectedSets
+
+                                updatedMuscleStates[muscle] = getMuscleColor(totalSets)
                             }
                             muscleStates.clear()
                             muscleStates.putAll(updatedMuscleStates)
@@ -267,12 +304,10 @@ fun WorkoutLogApp(sharedViewModel: SharedViewModel) {
                 modifier = Modifier
                     .fillMaxWidth()
                     .aspectRatio(1f)
-                    .padding(16.dp)
             ) {
                 AsyncImage(
                     model = bodyImage,
                     contentDescription = "Full Body Diagram",
-                    modifier = Modifier.fillMaxSize()
                 )
 
                 MuscleGroupsView(muscleStates)
@@ -315,7 +350,7 @@ fun WorkoutLogApp(sharedViewModel: SharedViewModel) {
 }
 
 @Composable
-fun MuscleGroupsView(muscleStates: Map<String, Int>) {
+fun MuscleGroupsView(muscleStates: Map<String, Color>) {
     // Map muscle names to their respective drawable resources
     val muscleDrawableMap = mapOf(
         "ab" to R.drawable.abs,
@@ -342,25 +377,17 @@ fun MuscleGroupsView(muscleStates: Map<String, Int>) {
         "vastus-medialis" to R.drawable.vastus_medialis,
     )
 
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .aspectRatio(1f)
-    ) {
-        // Iterate through muscleStates and display each muscle group
-        muscleStates.forEach { (muscle, colorInt) ->
-            val drawableRes = muscleDrawableMap[muscle]
-            if (drawableRes != null) {
-                val composeColor = Color(colorInt)
-                AsyncImage(
-                    model = drawableRes,
-                    contentDescription = muscle,
-                    modifier = Modifier
-                        .fillMaxSize(),
-
-                    colorFilter = ColorFilter.tint(composeColor)
-                )
-            }
+    // Iterate through muscleStates and display each muscle group
+    muscleStates.forEach { (muscle, color) ->
+        val drawableRes = muscleDrawableMap[muscle]
+        if (drawableRes != null) {
+            AsyncImage(
+                model = drawableRes,
+                contentDescription = muscle,
+                modifier = Modifier
+                    .fillMaxSize(),
+                colorFilter = ColorFilter.tint(color)
+            )
         }
     }
 }
