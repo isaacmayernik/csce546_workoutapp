@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -29,6 +30,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -171,6 +173,7 @@ fun Goals(sharedViewModel: SharedViewModel, navController: NavHostController) {
                     .weight(1f)
                     .padding(8.dp)
                     .width(250.dp),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 decorationBox = { innerTextField ->
                     Box(
                         modifier = Modifier
@@ -210,6 +213,7 @@ fun Goals(sharedViewModel: SharedViewModel, navController: NavHostController) {
                     .weight(1f)
                     .padding(8.dp)
                     .width(250.dp),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 decorationBox = { innerTextField ->
                     Box(
                         modifier = Modifier
@@ -293,6 +297,7 @@ fun Goals(sharedViewModel: SharedViewModel, navController: NavHostController) {
                     .weight(1f)
                     .padding(8.dp)
                     .width(250.dp),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 decorationBox = { innerTextField ->
                     Box(
                         modifier = Modifier
