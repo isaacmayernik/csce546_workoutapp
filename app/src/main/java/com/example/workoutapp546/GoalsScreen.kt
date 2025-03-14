@@ -75,10 +75,19 @@ fun Goals(sharedViewModel: SharedViewModel, navController: NavHostController) {
 
     val savedGoals = sharedViewModel.savedGoals
     val currentGoal = savedGoals.find { it.date == getCurrentDate() }
+
+    fun formatDouble(value: Double): String {
+        return if (value == value.toInt().toDouble()) {
+            value.toInt().toString()
+        } else {
+            value.toString()
+        }
+    }
+
     LaunchedEffect(currentGoal) {
         if (currentGoal != null) {
-            currentWeight = currentGoal.currentWeight.toString()
-            weightGoal = currentGoal.weightGoal.toString()
+            currentWeight = formatDouble(currentGoal.currentWeight)
+            weightGoal = formatDouble(currentGoal.weightGoal)
             activityLevel = currentGoal.activityLevel
             calorieGoal = currentGoal.calorieGoal.toString()
             description = currentGoal.description
@@ -122,7 +131,7 @@ fun Goals(sharedViewModel: SharedViewModel, navController: NavHostController) {
 
     // Automatically saves goals/info
     LaunchedEffect(currentWeight, weightGoal, activityLevel, calorieGoal, description) {
-        delay(500)
+        delay(5000)
         saveGoal()
     }
 
@@ -165,9 +174,11 @@ fun Goals(sharedViewModel: SharedViewModel, navController: NavHostController) {
             // Current weight input
             BasicTextField(
                 value = currentWeight,
-                onValueChange = {
-                    currentWeight = it
-                    hasChanges = true
+                onValueChange = { newValue ->
+                    if (newValue.isEmpty() || newValue.matches(Regex("^\\d*\\.?\\d*\$"))) {
+                        currentWeight = newValue
+                        hasChanges = true
+                    }
                 },
                 modifier = Modifier
                     .weight(1f)
@@ -205,9 +216,11 @@ fun Goals(sharedViewModel: SharedViewModel, navController: NavHostController) {
             // Weight goal input
             BasicTextField(
                 value = weightGoal,
-                onValueChange = {
-                    weightGoal = it
-                    hasChanges = true
+                onValueChange = { newValue ->
+                    if (newValue.isEmpty() || newValue.matches(Regex("^\\d*\\.?\\d*\$"))) {
+                        weightGoal = newValue
+                        hasChanges = true
+                    }
                 },
                 modifier = Modifier
                     .weight(1f)
@@ -380,14 +393,16 @@ fun WeightGraph(goals: List<Goal>, sharedViewModel: SharedViewModel) {
                     setScaleEnabled(true) // enable scaling
                     setPinchZoom(false) // disable pinch zoom
                     axisRight.isEnabled = false // turn off right y-axis
-                    xAxis.position = XAxis.XAxisPosition.BOTTOM
+                    xAxis.position = XAxis.XAxisPosition.BOTTOM // just have bottom x-axis
+                    legend.isEnabled = false // disable legend of line color
+                    xAxis.setLabelCount(uniqueGoals.size, true) // show only as many labels as data points
+                    xAxis.granularity = 1f
 
-                    val dates = uniqueGoals.map { it.date }
                     xAxis.valueFormatter = object : ValueFormatter() {
                         override fun getFormattedValue(value: Float): String {
                             val index = value.toInt()
-                            return if (index < dates.size) {
-                                val date = dates[index]
+                            return if (index < uniqueGoals.size) {
+                                val date = uniqueGoals[index].date
                                 val dateFormat = SimpleDateFormat("MM-dd", Locale.getDefault())
                                 val parsedDate = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).parse(date)
 
@@ -426,7 +441,7 @@ private fun LineChart.updateGraphData(goals: List<Goal>) {
         lineWidth = 2f // line width
         circleRadius = 3f // circle radius
         setDrawCircleHole(false) // disable circle hole
-        valueTextSize = 10f
+        setDrawValues(false)
     }
     val lineData = LineData(dataSet)
     this.data = lineData
