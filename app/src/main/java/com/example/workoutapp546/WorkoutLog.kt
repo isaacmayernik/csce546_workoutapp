@@ -85,6 +85,29 @@ data class RoutineWorkout(
     val sets: Int
 )
 
+// alternate names for workouts in Select Workout dialog search box
+val synonymsMap = mapOf(
+    "Bicep curls" to listOf("Barbell curls", "Dumbbell curls"),
+    "Cable fly" to "Cable chest fly",
+    "Cable tricep pushdown" to "Tricep pushdown",
+    "Chest fly" to "Pectoral fly",
+    "Chest press" to "Bench press",
+    "Chest dips" to "Dips",
+    "Chin-ups" to "Pull-ups",
+    "Concentration dumbbell curls" to "Preacher curls",
+    "Forearm curls" to "Wrist curls",
+    "Glute bridge" to "Wide glute bridge",
+    "Hammer bicep curls" to "Hammer curl",
+    "Incline bench press" to "Incline chest press",
+    "Reverse sit ups" to "Reverse crunch",
+    "Seated cable row" to "Cable row",
+    "Seated dips" to "Tricep dip",
+    "Skipping rope" to "Jump rope",
+    "Standing calf raises" to "Calf raises",
+    "Tricep pushdown" to "Cable tricep pushdown",
+    "Walking lunges" to "Lunge"
+)
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WorkoutLogApp(sharedViewModel: SharedViewModel) {
@@ -491,7 +514,12 @@ fun WorkoutDialog(
     val filteredWorkouts = if (searchQuery.isEmpty()) {
         workoutNames
     } else {
-        workoutNames.filter { it.contains(searchQuery, ignoreCase = true) }
+        workoutNames.filter { workout ->
+            workout.contains(searchQuery, ignoreCase = true) ||
+                    synonymsMap.any { (synonym, mappedWorkout) ->
+                        synonym.contains(searchQuery, ignoreCase = true) && mappedWorkout == workout
+                    }
+        }
     }
 
     Dialog(onDismissRequest = onDismissRequest) {
