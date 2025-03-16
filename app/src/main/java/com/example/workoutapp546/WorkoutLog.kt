@@ -24,6 +24,7 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -101,15 +102,27 @@ fun WorkoutLogApp(sharedViewModel: SharedViewModel) {
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     var showRoutineDialog by remember { mutableStateOf(false) }
+    var showResetConfirmation by remember { mutableStateOf(false) }
+    var resetTriggered by remember { mutableStateOf(false) }
 
     val bodyImage = if (sharedViewModel.isDarkMode) R.drawable.dm_blank_body else R.drawable.blank_body
 
     LaunchedEffect(currentDate) {
+        selectedWorkout = ""
+        selectedSets = 0
         workouts.clear()
         workouts.addAll(loadWorkouts(sharedPreferences, currentDate))
         sharedViewModel.loadGoals(sharedPreferences)
         muscleStates.clear()
         muscleStates.putAll(loadMuscleState(sharedPreferences, currentDate))
+    }
+
+    LaunchedEffect(resetTriggered) {
+        if (resetTriggered) {
+            muscleStates.clear()
+            muscleStates.putAll(loadMuscleState(sharedPreferences, currentDate))
+            resetTriggered = false
+        }
     }
 
     val currentGoal = sharedViewModel.savedGoals.find { it.date == currentDate } ?: sharedViewModel.savedGoals.maxByOrNull { it.date }
@@ -234,17 +247,20 @@ fun WorkoutLogApp(sharedViewModel: SharedViewModel) {
                 horizontalArrangement = Arrangement.Center
             ) {
                 Button(
-                    onClick = { showWorkoutDialog = true }
+                    onClick = { showWorkoutDialog = true },
+                    modifier = Modifier.weight(.5f)
                 ) {
                     Text(selectedWorkout.ifEmpty { "Select Workout" })
                 }
                 Spacer(modifier = Modifier.width(8.dp))
 
                 Button(
-                    onClick = { showRoutineDialog = true }
+                    onClick = { showRoutineDialog = true },
+                    modifier = Modifier.weight(.5f)
                 ) {
                     Text("Use Routine")
                 }
+                Spacer(modifier = Modifier.width(8.dp))
             }
 
             Row(
@@ -332,7 +348,8 @@ fun WorkoutLogApp(sharedViewModel: SharedViewModel) {
                     selectedWorkout = workout
                 },
                 onDismissRequest = { showWorkoutDialog = false },
-                workoutNames = workoutNames
+                workoutNames = workoutNames,
+                onResetWorkouts = { showResetConfirmation = true }
             )
         }
 
@@ -344,6 +361,36 @@ fun WorkoutLogApp(sharedViewModel: SharedViewModel) {
                     showRoutineDialog = false
                 },
                 onDismissRequest = { showRoutineDialog = false }
+            )
+        }
+
+        if (showResetConfirmation) {
+            AlertDialog(
+                onDismissRequest = { showResetConfirmation = false },
+                title = { Text("Reset Workouts") },
+                text = { Text("Are you sure you want to reset all workouts for today, $currentDate?") },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            muscleStates.clear()
+                            saveMuscleState(sharedPreferences, currentDate, muscleStates)
+                            workouts.clear()
+                            saveWorkouts(sharedPreferences, currentDate, workouts)
+
+                            resetTriggered = true
+                            showResetConfirmation = false
+                        }
+                    ) {
+                        Text("Reset")
+                    }
+                },
+                dismissButton = {
+                    Button(
+                        onClick = { showResetConfirmation = false }
+                    ) {
+                        Text("Cancel")
+                    }
+                }
             )
         }
     }
@@ -436,7 +483,8 @@ fun WorkoutDialog(
     selectedWorkout: String,
     onWorkoutSelected: (String) -> Unit,
     onDismissRequest: () -> Unit,
-    workoutNames: List<String>
+    workoutNames: List<String>,
+    onResetWorkouts: () -> Unit
 ) {
     var searchQuery by remember { mutableStateOf("") }
 
@@ -526,6 +574,15 @@ fun WorkoutDialog(
                             }
                         }
                     }
+                }
+
+                Button(
+                    onClick = onResetWorkouts,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 16.dp)
+                ) {
+                    Text("Reset Workouts")
                 }
             }
         }
@@ -668,7 +725,7 @@ fun getDaysInMonth(year: Int, month: Int): Int {
 fun formatDate(year: Int, month: Int, day: Int): String {
     val calendar = Calendar.getInstance()
     calendar.set(year, month, day)
-    val dateFormat = SimpleDateFormat("yyyy-M-dd", Locale.getDefault())
+    val dateFormat = SimpleDateFormat("M-dd-yyyy", Locale.getDefault())
     return dateFormat.format(calendar.time)
 }
 
@@ -678,7 +735,7 @@ fun getCurrentDate(): String {
 }
 
 fun getPreviousDate(currentDate: String): String {
-    val dateFormat = SimpleDateFormat("yyyy-M-dd", Locale.getDefault())
+    val dateFormat = SimpleDateFormat("M-dd-yyyy", Locale.getDefault())
     val calendar = Calendar.getInstance()
     calendar.time = dateFormat.parse(currentDate)!!
     calendar.add(Calendar.DAY_OF_YEAR, -1)
@@ -686,7 +743,7 @@ fun getPreviousDate(currentDate: String): String {
 }
 
 fun getNextDate(currentDate: String): String {
-    val dateFormat = SimpleDateFormat("yyyy-M-dd", Locale.getDefault())
+    val dateFormat = SimpleDateFormat("M-dd-yyyy", Locale.getDefault())
     val calendar = Calendar.getInstance()
     calendar.time = dateFormat.parse(currentDate)!!
     calendar.add(Calendar.DAY_OF_YEAR, 1)
