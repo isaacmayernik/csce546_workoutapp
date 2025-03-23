@@ -209,7 +209,8 @@ fun WorkoutLogApp(sharedViewModel: SharedViewModel) {
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(vertical = 8.dp),
-                horizontalArrangement = Arrangement.Center
+                horizontalArrangement = Arrangement.SpaceEvenly,
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 Button(
                     onClick = { showWorkoutDialog = true },
@@ -230,7 +231,8 @@ fun WorkoutLogApp(sharedViewModel: SharedViewModel) {
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceAround
+                horizontalArrangement = Arrangement.SpaceEvenly,
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 Button(
                     onClick = {
@@ -259,12 +261,16 @@ fun WorkoutLogApp(sharedViewModel: SharedViewModel) {
                             affectedMuscles.forEach { muscle ->
                                 val currentSets = updatedMuscleStates[muscle]?.let { color ->
                                     when (color) {
-                                        Color.Red -> 3
-                                        Color(0xFFFFA500) -> 2
-                                        Color.Yellow -> 1
+                                        Color(0xFF18CB65) -> 0
+                                        Color(0xFFA8E02A) -> 1
+                                        Color(0xFFFFFF2D) -> 2
+                                        Color(0xFFFFD21F) -> 3
+                                        Color(0xFFFFB30A) -> 4
+                                        Color(0xFFCE3135) -> 5
+                                        Color(0xFFCE3135) -> 6
                                         else -> 0
                                     }
-                                }?: 0
+                                } ?: 0
                                 val totalSets = currentSets + selectedSets
 
                                 updatedMuscleStates[muscle] = getMuscleColor(totalSets)
@@ -452,6 +458,8 @@ fun WorkoutDialog(
     onResetWorkouts: () -> Unit
 ) {
     var searchQuery by remember { mutableStateOf("") }
+    var showSortDialog by remember { mutableStateOf(false) }
+    var selectedMuscleGroup by remember { mutableStateOf("All") }
 
     val filteredWorkouts = if (searchQuery.isEmpty()) {
         workoutNames
@@ -461,6 +469,14 @@ fun WorkoutDialog(
                     synonymsMap.any { (synonym, mappedWorkout) ->
                         synonym.contains(searchQuery, ignoreCase = true) && mappedWorkout == workout
                     }
+        }
+    }
+
+    val sortedWorkouts = if (selectedMuscleGroup == "All") {
+        filteredWorkouts
+    } else {
+        filteredWorkouts.filter { workout ->
+            workoutMuscleMap[workout]?.contains(selectedMuscleGroup) == true
         }
     }
 
@@ -474,38 +490,89 @@ fun WorkoutDialog(
                     .padding(16.dp)
                     .fillMaxWidth()
             ) {
-                // Search bar
-                BasicTextField(
-                    value = searchQuery,
-                    onValueChange = { searchQuery = it },
+                Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(bottom = 8.dp),
-                    decorationBox = { innerTextField ->
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(6.dp)
-                        ) {
-                            if (searchQuery.isEmpty()) {
-                                Text(
-                                    "Search workouts...",
-                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
-                                )
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ){
+                    // Search bar
+                    BasicTextField(
+                        value = searchQuery,
+                        onValueChange = { searchQuery = it },
+                        modifier = Modifier
+                            .weight(.75f)
+                            .padding(end = 8.dp),
+                        decorationBox = { innerTextField ->
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(6.dp)
+                            ) {
+                                if (searchQuery.isEmpty()) {
+                                    Text(
+                                        "Search workouts...",
+                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                                    )
+                                }
+                                innerTextField()
                             }
-                            innerTextField()
+                        }
+                    )
+
+                    // Sort button
+                    Button(
+                        onClick = { showSortDialog = true },
+                        modifier = Modifier.width(94.dp)
+                    ) {
+                        Text("Sort By")
+                    }
+                }
+
+                // if sorted by muscle group, display a Clear Sort button
+                if (selectedMuscleGroup != "All") {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 8.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text(
+                                text = "Sorted by:",
+                                style = MaterialTheme.typography.bodyMedium,
+                                modifier = Modifier.padding(8.dp)
+                            )
+                            Text(
+                                text = selectedMuscleGroup
+                                    .replace("-", " ")
+                                    .replaceFirstChar { it.uppercaseChar() },
+                                style = MaterialTheme.typography.bodyMedium,
+                                modifier = Modifier.padding(start = 8.dp)
+                            )
+                        }
+
+                        Button(
+                            onClick = { selectedMuscleGroup = "All" },
+                            modifier = Modifier.width(90.dp)
+                        ) {
+                            Text("Clear")
                         }
                     }
-                )
+                }
 
                 // Filtered workout list
-                if (filteredWorkouts.isEmpty()) {
+                if (sortedWorkouts.isEmpty()) {
                     Text("No workouts found", modifier = Modifier.padding(8.dp))
                 } else {
                     LazyColumn(
                         modifier = Modifier.heightIn(max = 300.dp)
                     ) {
-                        items(filteredWorkouts) { workout ->
+                        items(sortedWorkouts) { workout ->
                             var isHovered by remember { mutableStateOf(false) }
 
                             Box(
@@ -553,6 +620,70 @@ fun WorkoutDialog(
                         .padding(top = 16.dp)
                 ) {
                     Text("Reset Workouts")
+                }
+            }
+        }
+    }
+
+    if (showSortDialog) {
+        SortByDialog(
+            onDismissRequest = { showSortDialog = false },
+            onMuscleGroupSelected = { muscleGroup ->
+                selectedMuscleGroup = muscleGroup
+            }
+        )
+    }
+}
+
+// Dialog for sorting through muscle groups
+@Composable
+fun SortByDialog(
+    onDismissRequest: () -> Unit,
+    onMuscleGroupSelected: (String) -> Unit
+) {
+    val muscleGroups = workoutMuscleMap.values.flatten().toSet().toList().sorted()
+
+    Dialog(
+        onDismissRequest = onDismissRequest
+    ) {
+        Surface(
+            shape = MaterialTheme.shapes.medium,
+            modifier = Modifier.padding(16.dp),
+        ){
+            Column(
+                modifier = Modifier
+                    .padding(16.dp)
+                    .fillMaxWidth()
+            ) {
+                Text(
+                    text= "Sort by muscle group",
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+
+                LazyColumn(
+                    modifier = Modifier.heightIn(max = 300.dp)
+                ) {
+                    items(muscleGroups) { muscle ->
+                        val formattedMuscle = muscle
+                            .replace("-", " ") //replace hyphen with space
+                            .split(" ")
+                            .joinToString(" ") { word ->
+                                word.replaceFirstChar { it.uppercaseChar() }
+                            }
+
+                        Text(
+                            text = formattedMuscle,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    onMuscleGroupSelected(muscle)
+                                    onDismissRequest()
+                                }
+                                .padding(8.dp),
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
                 }
             }
         }

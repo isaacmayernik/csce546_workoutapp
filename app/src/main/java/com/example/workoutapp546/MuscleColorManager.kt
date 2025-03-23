@@ -6,14 +6,18 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
+import androidx.core.content.edit
 
 // define color level based on number of sets
 fun getMuscleColor(sets: Int): Color {
-    return when {
-        sets >= 3 -> Color.Red
-        sets == 2 -> Color(0xFFFFA500)
-        sets == 1 -> Color.Yellow
-        else -> Color(0xFF1ABA00)
+    return when (sets) {
+        0 -> Color(0xFF18CB65)
+        1 -> Color(0xFFA8E02A)
+        2 -> Color(0xFFFFFF2D)
+        3 -> Color(0xFFFFD21F)
+        4 -> Color(0xFFFFB30A)
+        5 -> Color(0xFFCE3135)
+        else -> Color(0xFFCE3135)
     }
 }
 
@@ -72,7 +76,7 @@ fun saveMuscleState(sharedPreferences: SharedPreferences, date: String, muscleSt
     val gson = Gson()
     val colorMap = muscleStates.mapValues { it.value.toArgb() }
     val json = gson.toJson(colorMap)
-    sharedPreferences.edit().putString("muscle_state_$date", json).apply()
+    sharedPreferences.edit { putString("muscle_state_$date", json) }
 }
 
 fun loadMuscleState(sharedPreferences: SharedPreferences, date: String): MutableMap<String, Color> {
@@ -82,7 +86,7 @@ fun loadMuscleState(sharedPreferences: SharedPreferences, date: String): Mutable
 
     val allMuscles = workoutMuscleMap.values.flatten().toSet()
     allMuscles.forEach { muscle ->
-        muscleStates[muscle] = Color(0xFF1ABA00)
+        muscleStates[muscle] = Color(0xFF18CB65)
     }
 
     if (json != null) {
