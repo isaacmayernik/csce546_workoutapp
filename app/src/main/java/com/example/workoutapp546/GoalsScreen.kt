@@ -73,6 +73,8 @@ fun Goals(sharedViewModel: SharedViewModel, navController: NavHostController) {
     var currentWeight by remember { mutableStateOf("") }
     var activityLevel by remember { mutableStateOf("") }
     var calorieGoal by remember { mutableStateOf("") }
+    var caloriesConsumed by remember { mutableStateOf("") }
+    var showCaloriesLeft by remember { mutableStateOf(false) }
     var description by remember { mutableStateOf("") }
     var hasChanges by remember { mutableStateOf(false) }
 
@@ -97,8 +99,13 @@ fun Goals(sharedViewModel: SharedViewModel, navController: NavHostController) {
             weightGoal = formatDouble(currentGoal.weightGoal)
             activityLevel = currentGoal.activityLevel
             calorieGoal = currentGoal.calorieGoal.toString()
+            caloriesConsumed = currentGoal.caloriesConsumed.toString()
             description = currentGoal.description
             hasChanges = false
+
+            if (currentGoal.caloriesConsumed > 0) {
+                showCaloriesLeft = true
+            }
         }
     }
 
@@ -106,16 +113,15 @@ fun Goals(sharedViewModel: SharedViewModel, navController: NavHostController) {
         val weight = weightGoal.toDoubleOrNull()
         val current = currentWeight.toDoubleOrNull()
         val calories = calorieGoal.toIntOrNull()
+        val consumed = caloriesConsumed.toIntOrNull()
         if (weight != null && current != null && calories != null && activityLevel.isNotEmpty()) {
             val currentDate = getCurrentDate()
-            val existingGoal = savedGoals.find { it.date == currentDate }
-            val caloriesConsumed = existingGoal?.caloriesConsumed ?: 0
             val goal = Goal(
                 weightGoal = weight,
                 currentWeight = current,
                 activityLevel = activityLevel,
                 calorieGoal = calories,
-                caloriesConsumed = caloriesConsumed,
+                caloriesConsumed = consumed ?: 0,
                 description = description,
                 date = currentDate,
                 lastUpdated = getCurrentDateTime()
@@ -354,6 +360,86 @@ fun Goals(sharedViewModel: SharedViewModel, navController: NavHostController) {
 
             Spacer(modifier = Modifier.height(8.dp))
 
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Calories Consumed",
+                    modifier = Modifier.weight(1f),
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                BasicTextField(
+                    value = caloriesConsumed,
+                    onValueChange = { caloriesConsumed = it },
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(8.dp)
+                        .width(250.dp),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    decorationBox = { innerTextField ->
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(8.dp)
+                        ) {
+                            if (caloriesConsumed.isEmpty()) {
+                                Text(
+                                    "Enter calories consumed",
+                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                                )
+                            }
+                            innerTextField()
+                        }
+                    }
+                )
+                Button(
+                    onClick = {
+                        val consumed = caloriesConsumed.toIntOrNull()
+                        val goal = calorieGoal.toIntOrNull()
+
+                        if (consumed != null && goal != null) {
+                            showCaloriesLeft = true
+                        } else {
+                            // error message
+                            scope.launch {
+                                snackbarHostState.showSnackbar("Please enter valid numbers for calories consumed and goal.")
+                            }
+                        }
+                    }
+                ) {
+                    Text("Save")
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            if (showCaloriesLeft) {
+                val consumed = caloriesConsumed.toIntOrNull()
+                val goal = calorieGoal.toIntOrNull()
+
+                if (consumed != null && goal != null) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Calories Left: ${goal - consumed} cal",
+                            style = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier.padding(8.dp)
+                        )
+                    }
+                } else {
+                    Text(
+                        text = "Invalid input for calories",
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.padding(8.dp)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
             // Description
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -411,7 +497,7 @@ fun WeightGraph(goals: List<Goal>, sharedViewModel: SharedViewModel) {
     val isDarkMode = sharedViewModel.isDarkMode
     val uniqueGoals = goals.distinctBy { it.date }
 
-    if (uniqueGoals.isNotEmpty()) {
+    if (uniqueGoals.isNotEmpty() && uniqueGoals.all { it.currentWeight > 0 }) {
         AndroidView(
             factory = {
                 LineChart(context).apply {
@@ -430,7 +516,7 @@ fun WeightGraph(goals: List<Goal>, sharedViewModel: SharedViewModel) {
                     xAxis.valueFormatter = object : ValueFormatter() {
                         override fun getFormattedValue(value: Float): String {
                             val index = value.toInt()
-                            return if (index < uniqueGoals.size) {
+                            return if (index >= 0 && index < uniqueGoals.size) {
                                 val date = uniqueGoals[index].date
                                 val dateFormat = SimpleDateFormat("M-dd", Locale.getDefault())
                                 val parsedDate = SimpleDateFormat("M-dd-yyyy", Locale.getDefault()).parse(date)
@@ -458,7 +544,7 @@ fun WeightGraph(goals: List<Goal>, sharedViewModel: SharedViewModel) {
                 .height(200.dp)
         )
     } else {
-        Text("Please enter your current weight to view a graph!", modifier = Modifier.padding(16.dp))
+        Text("No valid data to display", modifier = Modifier.padding(16.dp))
     }
 }
 
@@ -466,17 +552,19 @@ private fun LineChart.updateGraphData(goals: List<Goal>) {
     val entries = goals.mapIndexed { index, goal ->
         Entry(index.toFloat(), goal.currentWeight.toFloat())
     }
-    val dataSet = LineDataSet(entries, "").apply {
-        color = Color.BLUE // line color
-        setCircleColor(Color.BLUE) // point color
-        lineWidth = 2f // line width
-        circleRadius = 3f // circle radius
-        setDrawCircleHole(false) // disable circle hole
-        setDrawValues(false)
+    if (entries.isNotEmpty()) {
+        val dataSet = LineDataSet(entries, "").apply {
+            color = Color.BLUE // line color
+            setCircleColor(Color.BLUE) // point color
+            lineWidth = 2f // line width
+            circleRadius = 3f // circle radius
+            setDrawCircleHole(false) // disable circle hole
+            setDrawValues(false)
+        }
+        val lineData = LineData(dataSet)
+        this.data = lineData
+        invalidate()
     }
-    val lineData = LineData(dataSet)
-    this.data = lineData
-    invalidate()
 }
 
 private fun LineChart.setGraphColors(isDarkMode: Boolean) {

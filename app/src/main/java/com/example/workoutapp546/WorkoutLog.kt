@@ -37,6 +37,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
@@ -65,6 +66,7 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
+import androidx.core.content.edit
 
 data class Workout(
     val name: String,
@@ -120,7 +122,6 @@ fun WorkoutLogApp(sharedViewModel: SharedViewModel) {
     var selectedSets by remember { mutableIntStateOf(0) }
     val workoutNames by remember { mutableStateOf(workoutMuscleMap.keys.toList()) }
     val workouts = remember { mutableStateListOf<Workout>() }
-    var caloriesConsumed by remember { mutableStateOf("") }
     val muscleStates = remember { mutableStateMapOf<String, Color>() }
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
@@ -147,8 +148,6 @@ fun WorkoutLogApp(sharedViewModel: SharedViewModel) {
             resetTriggered = false
         }
     }
-
-    val currentGoal = sharedViewModel.savedGoals.find { it.date == currentDate } ?: sharedViewModel.savedGoals.maxByOrNull { it.date }
 
     Scaffold(
         modifier = Modifier
@@ -205,63 +204,6 @@ fun WorkoutLogApp(sharedViewModel: SharedViewModel) {
             }
 
             Spacer(modifier = Modifier.height(16.dp))
-
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 8.dp),
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                // Calories consumed input
-                BasicTextField(
-                    value = caloriesConsumed,
-                    onValueChange = { caloriesConsumed = it },
-                    modifier = Modifier
-                        .weight(1f)
-                        .padding(end = 8.dp),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    decorationBox = { innerTextField ->
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(8.dp)
-                        ) {
-                            if (caloriesConsumed.isEmpty()) {
-                                Text(
-                                    text = "Enter calories consumed today",
-                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
-                                    fontSize = 12.sp
-                                )
-                            }
-                            innerTextField()
-                        }
-                    }
-                )
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // Save calories button
-                Button(
-                    onClick = {
-                        val calories = caloriesConsumed.toIntOrNull()
-                        if (calories != null) {
-                            sharedViewModel.updateCaloriesConsumed(sharedPreferences, currentDate, calories)
-                            caloriesConsumed = ""
-                        }
-                    },
-                ) {
-                    Text("Save Calories")
-                }
-
-                // Display calories left for today
-                if (currentGoal != null) {
-                    Text(
-                        text = "Calories Left: ${currentGoal.calorieGoal - currentGoal.caloriesConsumed} cal",
-                        style = MaterialTheme.typography.titleMedium
-                    )
-                }
-            }
 
             Row (
                 modifier = Modifier
@@ -781,7 +723,7 @@ fun getNextDate(currentDate: String): String {
 fun saveWorkouts(sharedPreferences: SharedPreferences, date: String, workouts: List<Workout>) {
     val gson = Gson()
     val json = gson.toJson(workouts)
-    sharedPreferences.edit().putString(date, json).apply()
+    sharedPreferences.edit { putString(date, json) }
 }
 
 fun loadWorkouts(sharedPreferences: SharedPreferences, date: String): List<Workout> {
