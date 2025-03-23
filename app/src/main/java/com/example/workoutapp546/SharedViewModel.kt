@@ -7,6 +7,7 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
+import androidx.core.content.edit
 
 class SharedViewModel : ViewModel() {
     var savedGoals by mutableStateOf<List<Goal>>(emptyList())
@@ -40,7 +41,7 @@ class SharedViewModel : ViewModel() {
     fun saveGoals(sharedPreferences: SharedPreferences, goals: List<Goal>) {
         val gson = Gson()
         val json = gson.toJson(goals)
-        sharedPreferences.edit().putString("goals", json).apply()
+        sharedPreferences.edit { putString("goals", json) }
         savedGoals = goals.distinctBy { it.date } // no duplicate dates
     }
 
@@ -65,7 +66,7 @@ class SharedViewModel : ViewModel() {
     }
 
     private fun saveDarkModeState(sharedPreferences: SharedPreferences, enabled: Boolean) {
-        sharedPreferences.edit().putBoolean("dark_mode", enabled).apply()
+        sharedPreferences.edit{ putBoolean("dark_mode", enabled) }
     }
 
     fun loadRoutines(sharedPreferences: SharedPreferences) {
@@ -82,7 +83,7 @@ class SharedViewModel : ViewModel() {
     private fun saveRoutines(sharedPreferences: SharedPreferences, routines: List<Routine>) {
         val gson = Gson()
         val json = gson.toJson(routines)
-        sharedPreferences.edit().putString("routines", json).apply()
+        sharedPreferences.edit { putString("routines", json) }
         savedRoutines = routines
     }
 
