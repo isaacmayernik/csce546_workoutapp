@@ -2,6 +2,7 @@ package com.example.workoutapp546
 
 import android.content.SharedPreferences
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
@@ -25,6 +26,31 @@ class SharedViewModel : ViewModel() {
 
     fun setUnsavedChanges(hasChanges: Boolean) {
         _hasUnsavedChanges.value = hasChanges
+    }
+
+    private var _hasChangesMap = mutableStateMapOf<String, Boolean>()
+    val hasChangesMap: Map<String, Boolean>
+        get() = _hasChangesMap
+
+    fun setHasChanges(date: String, hasChanges: Boolean, sharedPreferences: SharedPreferences) {
+        _hasChangesMap[date] = hasChanges
+        saveChangesState(sharedPreferences)
+    }
+
+    fun saveChangesState(sharedPreferences: SharedPreferences) {
+        val gson = Gson()
+        val json = gson.toJson(_hasChangesMap)
+        sharedPreferences.edit { putString("changes_state", json) }
+    }
+
+    fun loadChangesState(sharedPreferences: SharedPreferences) {
+        val gson = Gson()
+        val json = sharedPreferences.getString("changes_state", null)
+        if (json != null) {
+            val type = object : TypeToken<Map<String, Boolean>>() {}.type
+            _hasChangesMap.clear()
+            _hasChangesMap.putAll(gson.fromJson(json, type))
+        }
     }
 
     fun loadGoals(sharedPreferences: SharedPreferences) {

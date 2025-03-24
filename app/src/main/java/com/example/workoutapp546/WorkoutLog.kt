@@ -21,7 +21,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material3.AlertDialog
@@ -37,7 +36,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
@@ -54,7 +52,6 @@ import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -123,6 +120,8 @@ fun WorkoutLogApp(sharedViewModel: SharedViewModel) {
     val workoutNames by remember { mutableStateOf(workoutMuscleMap.keys.toList()) }
     val workouts = remember { mutableStateListOf<Workout>() }
     val muscleStates = remember { mutableStateMapOf<String, Color>() }
+    val muscleStatesHistory = remember { mutableStateMapOf<String, MutableList<Map<String, Color>>>() }
+    val hasChanges = remember { mutableStateOf(sharedViewModel.hasChangesMap[currentDate] == true) }
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     var showRoutineDialog by remember { mutableStateOf(false) }
@@ -139,6 +138,8 @@ fun WorkoutLogApp(sharedViewModel: SharedViewModel) {
         sharedViewModel.loadGoals(sharedPreferences)
         muscleStates.clear()
         muscleStates.putAll(loadMuscleState(sharedPreferences, currentDate))
+        sharedViewModel.loadChangesState(sharedPreferences)
+        hasChanges.value = sharedViewModel.hasChangesMap[currentDate] == true
     }
 
     LaunchedEffect(resetTriggered) {
@@ -256,6 +257,9 @@ fun WorkoutLogApp(sharedViewModel: SharedViewModel) {
                                 snackbarHostState.showSnackbar("Please select a workout from the dropdown.")
                             }
                         } else if (selectedSets > 0) {
+                            val historyForDate = muscleStatesHistory.getOrPut(currentDate) { mutableStateListOf() }
+                            historyForDate.add(muscleStates.toMap())
+
                             val affectedMuscles = workoutMuscleMap[selectedWorkout] ?: listOf()
                             val updatedMuscleStates = muscleStates.toMutableMap()
                             affectedMuscles.forEach { muscle ->
@@ -278,6 +282,9 @@ fun WorkoutLogApp(sharedViewModel: SharedViewModel) {
                             muscleStates.clear()
                             muscleStates.putAll(updatedMuscleStates)
                             saveMuscleState(sharedPreferences, currentDate, updatedMuscleStates)
+                            sharedViewModel.setHasChanges(currentDate, true, sharedPreferences)
+                            hasChanges.value = true
+                            sharedViewModel.saveChangesState(sharedPreferences)
                         }
                     }
                 ) {
@@ -301,6 +308,31 @@ fun WorkoutLogApp(sharedViewModel: SharedViewModel) {
             }
         }
 
+        val onUndoLastSave = {
+            val historyForDate = muscleStatesHistory[currentDate]
+            if (historyForDate != null && historyForDate.isNotEmpty()) {
+                val previousState = historyForDate.removeAt(historyForDate.size - 1)
+                muscleStates.clear()
+                muscleStates.putAll(previousState)
+                saveMuscleState(sharedPreferences, currentDate, previousState)
+
+                workouts.clear()
+                workouts.addAll(loadWorkouts(sharedPreferences, currentDate))
+                hasChanges.value = historyForDate.isNotEmpty()
+                sharedViewModel.setHasChanges(currentDate, hasChanges.value, sharedPreferences)
+
+                showWorkoutDialog = false
+                scope.launch {
+                    snackbarHostState.showSnackbar("Done!")
+                }
+            } else {
+                scope.launch {
+                    snackbarHostState.showSnackbar("No recent changes to undo.")
+                }
+            }
+            Unit
+        }
+
         if (showDatePicker) {
             DatePickerDialog(
                 onDismissRequest = { showDatePicker = false },
@@ -320,7 +352,10 @@ fun WorkoutLogApp(sharedViewModel: SharedViewModel) {
                 },
                 onDismissRequest = { showWorkoutDialog = false },
                 workoutNames = workoutNames,
-                onResetWorkouts = { showResetConfirmation = true }
+                onResetWorkouts = { showResetConfirmation = true },
+                onUndoLastSave = onUndoLastSave,
+                hasChanges = hasChanges.value,
+                hasHistory = muscleStatesHistory[currentDate]?.isNotEmpty() == true
             )
         }
 
@@ -343,13 +378,21 @@ fun WorkoutLogApp(sharedViewModel: SharedViewModel) {
                 confirmButton = {
                     Button(
                         onClick = {
+                            muscleStatesHistory[currentDate]?.clear()
                             muscleStates.clear()
                             saveMuscleState(sharedPreferences, currentDate, muscleStates)
                             workouts.clear()
                             saveWorkouts(sharedPreferences, currentDate, workouts)
 
+                            hasChanges.value = false
+                            sharedViewModel.setHasChanges(currentDate, false, sharedPreferences)
+                            showWorkoutDialog = false
                             resetTriggered = true
                             showResetConfirmation = false
+
+                            scope.launch {
+                                snackbarHostState.showSnackbar("Done!")
+                            }
                         }
                     ) {
                         Text("Reset")
@@ -455,7 +498,10 @@ fun WorkoutDialog(
     onWorkoutSelected: (String) -> Unit,
     onDismissRequest: () -> Unit,
     workoutNames: List<String>,
-    onResetWorkouts: () -> Unit
+    onResetWorkouts: () -> Unit,
+    onUndoLastSave: () -> Unit,
+    hasChanges: Boolean,
+    hasHistory: Boolean
 ) {
     var searchQuery by remember { mutableStateOf("") }
     var showSortDialog by remember { mutableStateOf(false) }
@@ -614,10 +660,21 @@ fun WorkoutDialog(
                 }
 
                 Button(
+                    onClick = onUndoLastSave,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 8.dp),
+                    enabled = hasChanges
+                ) {
+                    Text("Undo Last Save")
+                }
+
+                Button(
                     onClick = onResetWorkouts,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(top = 16.dp)
+                        .padding(top = 8.dp),
+                    enabled = hasHistory
                 ) {
                     Text("Reset Workouts")
                 }
