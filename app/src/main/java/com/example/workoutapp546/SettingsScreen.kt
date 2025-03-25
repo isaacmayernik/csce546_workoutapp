@@ -8,6 +8,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -28,78 +31,112 @@ import androidx.navigation.NavHostController
 fun Settings(sharedViewModel: SharedViewModel, navController: NavHostController) {
     val context = LocalContext.current
     val sharedPreferences = remember { context.getSharedPreferences("app_prefs", Context.MODE_PRIVATE) }
+    val snackbarHostState = remember { SnackbarHostState() }
+
     var isDarkMode by remember { mutableStateOf(sharedViewModel.isDarkMode) }
+    var notificationsEnabled by remember { mutableStateOf(NotificationHelper.areNotificationsEnabled(context)) }
 
     LaunchedEffect(sharedViewModel.isDarkMode) {
         isDarkMode = sharedViewModel.isDarkMode
     }
 
-    Column(
-        modifier = Modifier
-            .padding(16.dp)
-            .fillMaxWidth(),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Text(
-            text = "Settings",
-            style = MaterialTheme.typography.titleLarge.copy(
-                fontSize = 32.sp,
-                fontWeight = FontWeight.Bold
-            ),
-            modifier = Modifier.padding(bottom = 24.dp)
-        )
-
-        // Dark mode setting
-        Row(
+    Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) }
+    ) { innerPadding ->
+        Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically
+                .padding(innerPadding)
+                .padding(16.dp)
+                .fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                "Dark Mode",
-                style = MaterialTheme.typography.titleMedium.copy(
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Medium
+                text = "Settings",
+                style = MaterialTheme.typography.titleLarge.copy(
+                    fontSize = 32.sp,
+                    fontWeight = FontWeight.Bold
                 ),
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.padding(bottom = 24.dp)
             )
 
-            Switch(
-                checked = isDarkMode,
-                onCheckedChange = {
-                    isDarkMode = it
-                    sharedViewModel.toggleDarkMode(it, sharedPreferences)
-                },
-                modifier = Modifier.wrapContentSize()
-            )
-        }
-
-        // Create routine
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                "Create a routine",
-                style = MaterialTheme.typography.titleMedium.copy(
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Medium
-                ),
-                modifier = Modifier.weight(1f)
-            )
-
-            Button(
-                onClick = { navController.navigate("create_routine") },
-                modifier = Modifier.wrapContentSize()
+            // Dark mode setting
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Create",
-                    style = MaterialTheme.typography.bodyLarge.copy(
-                        fontSize = 16.sp
+                    "Dark Mode",
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Medium
+                    ),
+                    modifier = Modifier.weight(1f)
+                )
+
+                Switch(
+                    checked = isDarkMode,
+                    onCheckedChange = {
+                        isDarkMode = it
+                        sharedViewModel.toggleDarkMode(it, sharedPreferences)
+                    },
+                    modifier = Modifier.wrapContentSize()
+                )
+            }
+
+            // Create routine
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    "Create a routine",
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Medium
+                    ),
+                    modifier = Modifier.weight(1f)
+                )
+
+                Button(
+                    onClick = { navController.navigate("create_routine") },
+                    modifier = Modifier.wrapContentSize()
+                ) {
+                    Text(
+                        text = "Create",
+                        style = MaterialTheme.typography.bodyLarge.copy(
+                            fontSize = 16.sp
+                        )
                     )
+                }
+            }
+
+            // Notifications switch
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    "Enable Notifications",
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Medium
+                    ),
+                    modifier = Modifier.weight(1f)
+                )
+
+                Switch(
+                    checked = notificationsEnabled,
+                    onCheckedChange = { enabled ->
+                        notificationsEnabled = enabled
+                        NotificationHelper.setNotificationsEnabled(context, enabled)
+                    },
+                    modifier = Modifier.wrapContentSize()
                 )
             }
         }

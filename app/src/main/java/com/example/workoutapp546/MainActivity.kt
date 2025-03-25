@@ -51,6 +51,7 @@ class MainActivity : ComponentActivity() {
             ) {
                 Surface {
                     NavigationApp(sharedViewModel)
+                    RequestNotificationPermission()
                 }
             }
         }
