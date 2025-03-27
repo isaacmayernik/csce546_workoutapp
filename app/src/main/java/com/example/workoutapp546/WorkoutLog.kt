@@ -5,16 +5,19 @@ import android.content.Context
 import android.content.SharedPreferences
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
@@ -31,12 +34,14 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateMapOf
@@ -51,7 +56,9 @@ import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -64,6 +71,8 @@ import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 import androidx.core.content.edit
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 data class Workout(
     val name: String,
@@ -120,7 +129,7 @@ fun WorkoutLogApp(sharedViewModel: SharedViewModel) {
     val workoutNames by remember { mutableStateOf(workoutMuscleMap.keys.toList()) }
     val workouts = remember { mutableStateListOf<Workout>() }
     val muscleStates = remember { mutableStateMapOf<String, Color>() }
-    val muscleStatesHistory = remember { mutableStateMapOf<String, MutableList<Map<String, Color>>>() }
+    val muscleStatesHistory = remember { mutableStateMapOf<String, MutableList<Pair<Map<String, Color>, List<Workout>>>>() }
     val hasChanges = remember { mutableStateOf(sharedViewModel.hasChangesMap[currentDate] == true) }
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
@@ -140,6 +149,7 @@ fun WorkoutLogApp(sharedViewModel: SharedViewModel) {
         muscleStates.putAll(loadMuscleState(sharedPreferences, currentDate))
         sharedViewModel.loadChangesState(sharedPreferences)
         hasChanges.value = sharedViewModel.hasChangesMap[currentDate] == true
+        muscleStatesHistory[currentDate]?.clear()
     }
 
     LaunchedEffect(resetTriggered) {
@@ -258,7 +268,7 @@ fun WorkoutLogApp(sharedViewModel: SharedViewModel) {
                             }
                         } else if (selectedSets > 0) {
                             val historyForDate = muscleStatesHistory.getOrPut(currentDate) { mutableStateListOf() }
-                            historyForDate.add(muscleStates.toMap())
+                            historyForDate.add(Pair(muscleStates.toMap(), workouts.toList()))
 
                             val affectedMuscles = workoutMuscleMap[selectedWorkout] ?: listOf()
                             val updatedMuscleStates = muscleStates.toMutableMap()
@@ -311,13 +321,15 @@ fun WorkoutLogApp(sharedViewModel: SharedViewModel) {
         val onUndoLastSave = {
             val historyForDate = muscleStatesHistory[currentDate]
             if (historyForDate != null && historyForDate.isNotEmpty()) {
-                val previousState = historyForDate.removeAt(historyForDate.size - 1)
+                val (previousMuscleState, previousWorkouts) = historyForDate.removeAt(historyForDate.size - 1)
                 muscleStates.clear()
-                muscleStates.putAll(previousState)
-                saveMuscleState(sharedPreferences, currentDate, previousState)
+                muscleStates.putAll(previousMuscleState)
+                saveMuscleState(sharedPreferences, currentDate, previousMuscleState)
 
                 workouts.clear()
                 workouts.addAll(loadWorkouts(sharedPreferences, currentDate))
+                saveWorkouts(sharedPreferences, currentDate, previousWorkouts)
+
                 hasChanges.value = historyForDate.isNotEmpty()
                 sharedViewModel.setHasChanges(currentDate, hasChanges.value, sharedPreferences)
 
@@ -363,10 +375,50 @@ fun WorkoutLogApp(sharedViewModel: SharedViewModel) {
             RoutineDialog(
                 routines = sharedViewModel.savedRoutines,
                 onRoutineSelected = { routine ->
-                    selectedWorkout = routine.workouts.joinToString { it.name }
+                    // Show confirmation dialog before adding
                     showRoutineDialog = false
+                    scope.launch {
+                        val confirm = withContext(Dispatchers.Main) {
+                            snackbarHostState.showSnackbar(
+                                message = "Add ${routine.name} to today's workout?",
+                                actionLabel = "Add"
+                            ) == SnackbarResult.ActionPerformed
+                        }
+                        if (confirm) {
+                            val historyForDate = muscleStatesHistory.getOrPut(currentDate) { mutableStateListOf() }
+                            historyForDate.add(Pair(muscleStates.toMap(), workouts.toList()))
+
+                            routine.workouts.forEach { workout ->
+                                val affectedMuscles = workoutMuscleMap[workout.name] ?: listOf()
+                                affectedMuscles.forEach { muscle ->
+                                    val currentSets = muscleStates[muscle]?.let { color ->
+                                        when (color) {
+                                            Color(0xFF18CB65) -> 0
+                                            Color(0xFFA8E02A) -> 1
+                                            Color(0xFFFFFF2D) -> 2
+                                            Color(0xFFFFD21F) -> 3
+                                            Color(0xFFFFB30A) -> 4
+                                            Color(0xFFCE3135) -> 5
+                                            Color(0xFFCE3135) -> 6
+                                            else -> 0
+                                        }
+                                    } ?: 0
+                                    val totalSets = currentSets + workout.sets
+                                    muscleStates[muscle] = getMuscleColor(totalSets)
+                                }
+                                workouts.add(Workout(workout.name, List(workout.sets) { WorkoutSet(0) }))
+                            }
+                            saveMuscleState(sharedPreferences, currentDate, muscleStates)
+                            saveWorkouts(sharedPreferences, currentDate, workouts)
+                            sharedViewModel.setHasChanges(currentDate, true, sharedPreferences)
+                            hasChanges.value = true
+                            snackbarHostState.showSnackbar("Added ${routine.name} to workout")
+                        }
+                    }
                 },
-                onDismissRequest = { showRoutineDialog = false }
+                onDismissRequest = { showRoutineDialog = false },
+                sharedViewModel = sharedViewModel,
+                context = context
             )
         }
 
@@ -458,8 +510,13 @@ fun MuscleGroupsView(muscleStates: Map<String, Color>) {
 fun RoutineDialog(
     routines: List<Routine>,
     onRoutineSelected: (Routine) -> Unit,
-    onDismissRequest: () -> Unit
+    onDismissRequest: () -> Unit,
+    sharedViewModel: SharedViewModel,
+    context: Context,
 ) {
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+
     Dialog(onDismissRequest = onDismissRequest) {
         Surface(
             shape = MaterialTheme.shapes.medium,
@@ -475,12 +532,39 @@ fun RoutineDialog(
                 } else {
                     LazyColumn {
                         items(routines) { routine ->
-                            Text(
-                                text = routine.name,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable { onRoutineSelected(routine) }
-                                    .padding(8.dp)
+                            var showDelete by remember { mutableStateOf(false) }
+
+                            SwipeToReveal(
+                                onReveal = { showDelete = true },
+                                onDismiss = { showDelete = false },
+                                content = {
+                                    Text(
+                                        text = routine.name,
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clickable { onRoutineSelected(routine) }
+                                            .padding(8.dp)
+                                    )
+                                },
+                                actionContent = {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .background(Color.Red)
+                                            .clickable {
+                                                sharedViewModel.removeRoutine(
+                                                    context.getSharedPreferences("app_prefs", Context.MODE_PRIVATE),
+                                                    routine
+                                                )
+                                                scope.launch {
+                                                    snackbarHostState.showSnackbar("Routine deleted")
+                                                }
+                                            },
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text("Delete", color = Color.White)
+                                    }
+                                }
                             )
                         }
                     }
@@ -870,6 +954,56 @@ fun ScrollablePicker(
                     modifier = Modifier.align(Alignment.Center)
                 )
             }
+        }
+    }
+}
+
+@Composable
+fun SwipeToReveal(
+    onReveal: () -> Unit,
+    onDismiss: () -> Unit,
+    content: @Composable () -> Unit,
+    actionContent: @Composable () -> Unit
+) {
+    var offsetX by remember { mutableFloatStateOf(0f) }
+    val maxOffset = 100.dp
+    val maxOffsetPx = with(LocalDensity.current) { maxOffset.toPx() }
+
+    Box(
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        // Delete button
+        Box(
+            modifier = Modifier
+                .align(Alignment.CenterEnd)
+                .fillMaxHeight()
+                .width(maxOffset)
+        ) {
+            actionContent()
+        }
+
+        Box(
+            modifier = Modifier
+                .offset { IntOffset(offsetX.toInt(), 0) }
+                .pointerInput(Unit) {
+                    detectHorizontalDragGestures(
+                        onDragEnd = {
+                            if (offsetX < -maxOffsetPx / 2) {
+                                offsetX = -maxOffsetPx
+                                onReveal()
+                            } else {
+                                offsetX = 0f
+                                onDismiss()
+                            }
+                        },
+                        onHorizontalDrag = { _, dragAmount ->
+                            offsetX = (offsetX + dragAmount).coerceIn(-maxOffsetPx, 0f)
+                        }
+                    )
+                }
+                .background(MaterialTheme.colorScheme.surface)
+        ) {
+            content()
         }
     }
 }

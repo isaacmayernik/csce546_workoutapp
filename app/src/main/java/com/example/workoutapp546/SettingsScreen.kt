@@ -73,6 +73,13 @@ fun Settings(sharedViewModel: SharedViewModel, navController: NavHostController)
         }
     }
 
+    LaunchedEffect(Unit) {
+        if (sharedViewModel.routineJustCreated) {
+            snackbarHostState.showSnackbar("Routine created successfully!")
+            sharedViewModel.resetRoutineCreated()
+        }
+    }
+
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { innerPadding ->

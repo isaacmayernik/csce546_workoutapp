@@ -20,6 +20,17 @@ class SharedViewModel : ViewModel() {
     var savedRoutines by mutableStateOf<List<Routine>>(emptyList())
         private set
 
+    var routineJustCreated by mutableStateOf(false)
+        private set
+
+    fun setRoutineCreated() {
+        routineJustCreated = true
+    }
+
+    fun resetRoutineCreated() {
+        routineJustCreated = false
+    }
+
     private var _hasUnsavedChanges = mutableStateOf(false)
     val hasUnsavedChanges: Boolean
         get() = _hasUnsavedChanges.value
@@ -71,17 +82,6 @@ class SharedViewModel : ViewModel() {
         savedGoals = goals.distinctBy { it.date } // no duplicate dates
     }
 
-    fun updateCaloriesConsumed(sharedPreferences: SharedPreferences, date: String, calories: Int) {
-        val updatedGoals = savedGoals.map { goal ->
-            if (goal.date == date) {
-                goal.copy(caloriesConsumed = goal.caloriesConsumed + calories)
-            } else {
-                goal
-            }
-        }
-        saveGoals(sharedPreferences, updatedGoals)
-    }
-
     fun toggleDarkMode(enabled: Boolean, sharedPreferences: SharedPreferences) {
         isDarkMode = enabled
         saveDarkModeState(sharedPreferences, enabled)
@@ -115,6 +115,13 @@ class SharedViewModel : ViewModel() {
 
     fun addRoutine(sharedPreferences: SharedPreferences, routine: Routine) {
         val updatedRoutines = savedRoutines + routine
+        saveRoutines(sharedPreferences, updatedRoutines)
+    }
+
+    fun removeRoutine(sharedPreferences: SharedPreferences, routine: Routine) {
+        val updatedRoutines = savedRoutines.toMutableList().apply {
+            removeAll { it.name == routine.name }
+        }
         saveRoutines(sharedPreferences, updatedRoutines)
     }
 }
