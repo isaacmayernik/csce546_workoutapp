@@ -1,5 +1,8 @@
 package com.example.workoutapp546
 
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
@@ -26,6 +29,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
@@ -40,6 +44,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        createNotificationChannel()
 
         val sharedPreferences = getSharedPreferences("app_prefs", MODE_PRIVATE)
         sharedViewModel.loadDarkModeState(sharedPreferences)
@@ -51,9 +56,23 @@ class MainActivity : ComponentActivity() {
             ) {
                 Surface {
                     NavigationApp(sharedViewModel)
-                    RequestNotificationPermission()
                 }
             }
+        }
+    }
+
+    fun createNotificationChannel() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channel = NotificationChannel(
+                NotificationService.CHANNEL_ID,
+                "Workout App",
+                NotificationManager.IMPORTANCE_DEFAULT
+            ).apply {
+                description = "Daily motivational messages"
+            }
+
+            val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+            notificationManager.createNotificationChannel(channel)
         }
     }
 }
@@ -61,6 +80,14 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun NavigationApp(sharedViewModel: SharedViewModel) {
     val navController = rememberNavController()
+    val context = LocalContext.current
+
+    RequestNotificationPermission(
+        onPermissionResult = { enabled ->
+            NotificationService(context).setNotificationPreference(enabled)
+        }
+    )
+
     Scaffold (
         bottomBar = {
             BottomBarNavigation(navController, sharedViewModel)

@@ -1,6 +1,11 @@
 package com.example.workoutapp546
 
 import android.content.Context
+import android.content.Intent
+import android.os.Build
+import android.provider.Settings
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -31,13 +36,41 @@ import androidx.navigation.NavHostController
 fun Settings(sharedViewModel: SharedViewModel, navController: NavHostController) {
     val context = LocalContext.current
     val sharedPreferences = remember { context.getSharedPreferences("app_prefs", Context.MODE_PRIVATE) }
+    val notificationService = remember { NotificationService(context) }
     val snackbarHostState = remember { SnackbarHostState() }
+    var showSnackbar by remember { mutableStateOf(false) }
+    var snackbarMessage by remember { mutableStateOf("") }
 
     var isDarkMode by remember { mutableStateOf(sharedViewModel.isDarkMode) }
-    var notificationsEnabled by remember { mutableStateOf(NotificationHelper.areNotificationsEnabled(context)) }
+    var notificationsEnabled by remember { mutableStateOf(notificationService.areNotificationsEnabled()) }
+
+    // launcher for opening notifications settings
+    // also handles result -- if user does not enable in system settings, display a snackbar
+    //      otherwise, correctly change state of the notification switch
+    val notificationLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { _ ->
+        // update state when returning from system settings
+        val newState = notificationService.areNotificationsEnabled()
+        notificationsEnabled = newState
+        notificationService.setNotificationPreference(newState)
+
+        // show warning
+        if (!newState) {
+            snackbarMessage = "Notifications not enabled in system settings"
+            showSnackbar = true
+        }
+    }
 
     LaunchedEffect(sharedViewModel.isDarkMode) {
         isDarkMode = sharedViewModel.isDarkMode
+    }
+
+    LaunchedEffect(showSnackbar) {
+        if (showSnackbar) {
+            snackbarHostState.showSnackbar(snackbarMessage)
+            showSnackbar = false
+        }
     }
 
     Scaffold(
@@ -133,8 +166,17 @@ fun Settings(sharedViewModel: SharedViewModel, navController: NavHostController)
                 Switch(
                     checked = notificationsEnabled,
                     onCheckedChange = { enabled ->
-                        notificationsEnabled = enabled
-                        NotificationHelper.setNotificationsEnabled(context, enabled)
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                            // API 26+, open system settings notifications
+                            val intent = Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
+                                putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+                            }
+                            notificationLauncher.launch(intent)
+                        } else {
+                            // if API <= 25, toggle directly
+                            notificationService.setNotificationPreference(enabled)
+                            notificationsEnabled = enabled
+                        }
                     },
                     modifier = Modifier.wrapContentSize()
                 )
