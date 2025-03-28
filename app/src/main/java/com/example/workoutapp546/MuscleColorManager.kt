@@ -32,7 +32,7 @@ val workoutMuscleMap = mapOf(
     "Cable row" to listOf("trapezius", "back-lower", "bicep"),
     "Cable tricep pushdown" to listOf("tricep", "shoulder-deltoid"),
     "Calf raises" to listOf("calf"),
-    "Chest press machine" to listOf("chest-right", "chest-right"),
+    "Chest press machine" to listOf("chest-left", "chest-right"),
     "Crunches" to listOf("ab"),
     "Dips" to listOf("chest-left", "chest-right"),
     "Dumbbell curls" to listOf("bicep"),
