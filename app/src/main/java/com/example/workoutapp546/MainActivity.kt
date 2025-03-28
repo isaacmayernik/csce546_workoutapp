@@ -61,7 +61,7 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    fun createNotificationChannel() {
+    private fun createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
                 NotificationService.CHANNEL_ID,
@@ -69,6 +69,9 @@ class MainActivity : ComponentActivity() {
                 NotificationManager.IMPORTANCE_DEFAULT
             ).apply {
                 description = "Daily motivational messages"
+                enableLights(true)
+                enableVibration(true)
+                setShowBadge(true)
             }
 
             val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager

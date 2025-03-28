@@ -4,11 +4,11 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.edit
 import java.util.Calendar
-import java.util.TimeZone
 import kotlin.jvm.java
 
 class NotificationService(private val context: Context) {
@@ -42,6 +42,7 @@ class NotificationService(private val context: Context) {
             "You can always do better, be better. Never forget that.",
             "Be proud of yourself and how far you have come.",
             "Let's get that workout on!",
+            "You are never alone.",
         )
     }
 
@@ -49,48 +50,59 @@ class NotificationService(private val context: Context) {
     fun showNotification() {
         if (!areNotificationsEnabled()) return
 
-        // did user already receive a notification today
-        val lastNotificationTime = prefs.getLong(PREF_LAST_NOTIFICATION_TIME, 0)
         val now = System.currentTimeMillis()
-        val calendar = Calendar.getInstance()
-        calendar.timeInMillis = now
+        val calendar = Calendar.getInstance().apply {
+            timeInMillis = now
+        }
 
-        // convert user's timezone to Eastern Time
-        val timeZone = TimeZone.getDefault()
-        calendar.timeZone = timeZone
-
-        // check if between 9am-7pm
+        // Check if between 9am-7pm LOCAL TIME
         val hour = calendar.get(Calendar.HOUR_OF_DAY)
-        if (hour < 9 || hour >= 19) return
-
-        val lastCalendar = Calendar.getInstance()
-        lastCalendar.timeInMillis = lastNotificationTime
-        lastCalendar.timeZone = timeZone
-
-        if (lastCalendar.get(Calendar.DAY_OF_YEAR) == calendar.get(Calendar.DAY_OF_YEAR) &&
-            lastCalendar.get(Calendar.YEAR) == calendar.get(Calendar.YEAR)) {
+        if (hour < 9 || hour >= 19) {
             return
+        }
+
+        val lastNotificationTime = prefs.getLong(PREF_LAST_NOTIFICATION_TIME, 0)
+        if (lastNotificationTime > 0) {
+            val lastCalendar = Calendar.getInstance().apply {
+                timeInMillis = lastNotificationTime
+            }
+            if (lastCalendar.get(Calendar.DAY_OF_YEAR) == calendar.get(Calendar.DAY_OF_YEAR) &&
+                lastCalendar.get(Calendar.YEAR) == calendar.get(Calendar.YEAR)) {
+                return
+            }
         }
 
         // Create and show notification
         val randomMessage = motivationalMessages.random()
-        val activityIntent = Intent(context, MainActivity::class.java)
+        val activityIntent = Intent(context, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+        }
         val activityPendingIntent = PendingIntent.getActivity(
             context,
             1,
             activityIntent,
-            PendingIntent.FLAG_IMMUTABLE
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
-        val notification = NotificationCompat.Builder(context, CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_notification)
+
+        val builder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            NotificationCompat.Builder(context, CHANNEL_ID)
+        } else {
+            NotificationCompat.Builder(context, "").apply {
+                setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            }
+        }
+
+        builder.setSmallIcon(R.drawable.ic_notification)
             .setContentTitle("Workout App")
             .setContentText(randomMessage)
             .setContentIntent(activityPendingIntent)
-            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .setAutoCancel(true)
-            .build()
+            .setWhen(System.currentTimeMillis())
+            .setShowWhen(true)
 
-        notificationManager.notify(NOTIFICATION_ID, notification)
+        builder.setVibrate(longArrayOf(0, 200, 100, 200))
+
+        notificationManager.notify(NOTIFICATION_ID, builder.build())
         prefs.edit { putLong(PREF_LAST_NOTIFICATION_TIME, now) }
     }
 
@@ -121,23 +133,38 @@ class NotificationService(private val context: Context) {
 
 //    // Function for testing if notifications get sent
 //    fun showTestNotification() {
+//        if (!areNotificationsEnabled()) {
+//            // Optional: You might want to show a toast or log here
+//            return
+//        }
+//
 //        val randomMessage = motivationalMessages.random()
 //        val activityIntent = Intent(context, MainActivity::class.java)
 //        val activityPendingIntent = PendingIntent.getActivity(
 //            context,
-//            1,
+//            2,  // Different request code than regular notifications
 //            activityIntent,
 //            PendingIntent.FLAG_IMMUTABLE
 //        )
-//        val notification = NotificationCompat.Builder(context, CHANNEL_ID)
-//            .setSmallIcon(R.drawable.ic_notification)
-//            .setContentTitle("Workout App")
+//
+//        // Create the notification builder with proper backward compatibility
+//        val builder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+//            // Oreo and above - use channel ID
+//            NotificationCompat.Builder(context, CHANNEL_ID)
+//        } else {
+//            // Pre-Oreo - use empty string as channel ID
+//            NotificationCompat.Builder(context, "").apply {
+//                setPriority(NotificationCompat.PRIORITY_DEFAULT)
+//            }
+//        }
+//
+//        builder.setSmallIcon(R.drawable.ic_notification)
+//            .setContentTitle("Workout App - Test")
 //            .setContentText(randomMessage)
 //            .setContentIntent(activityPendingIntent)
-//            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
 //            .setAutoCancel(true)
-//            .build()
 //
-//        notificationManager.notify(NOTIFICATION_ID, notification)
+//        // Use a different notification ID so it doesn't replace regular notifications
+//        notificationManager.notify(NOTIFICATION_ID + 1, builder.build())
 //    }
 }
