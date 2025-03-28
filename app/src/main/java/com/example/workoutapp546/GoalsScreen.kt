@@ -157,10 +157,9 @@ fun Goals(sharedViewModel: SharedViewModel, navController: NavHostController) {
     ) { innerPadding ->
         Column(
             modifier = Modifier
-                .fillMaxSize()
                 .padding(innerPadding)
-                .padding(16.dp),
-            verticalArrangement = Arrangement.Center,
+                .padding(4.dp)
+                .fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Text(
@@ -184,7 +183,9 @@ fun Goals(sharedViewModel: SharedViewModel, navController: NavHostController) {
 
             // Current weight
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
@@ -229,7 +230,9 @@ fun Goals(sharedViewModel: SharedViewModel, navController: NavHostController) {
 
             // Weight goal
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
@@ -274,7 +277,9 @@ fun Goals(sharedViewModel: SharedViewModel, navController: NavHostController) {
 
             // Activity level
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
@@ -319,7 +324,9 @@ fun Goals(sharedViewModel: SharedViewModel, navController: NavHostController) {
 
             // Calorie goal
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
@@ -361,7 +368,9 @@ fun Goals(sharedViewModel: SharedViewModel, navController: NavHostController) {
             Spacer(modifier = Modifier.height(8.dp))
 
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
@@ -442,7 +451,9 @@ fun Goals(sharedViewModel: SharedViewModel, navController: NavHostController) {
 
             // Description
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(

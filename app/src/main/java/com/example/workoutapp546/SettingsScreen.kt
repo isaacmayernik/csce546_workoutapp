@@ -86,7 +86,7 @@ fun Settings(sharedViewModel: SharedViewModel, navController: NavHostController)
         Column(
             modifier = Modifier
                 .padding(innerPadding)
-                .padding(16.dp)
+                .padding(4.dp)
                 .fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
@@ -96,14 +96,15 @@ fun Settings(sharedViewModel: SharedViewModel, navController: NavHostController)
                     fontSize = 32.sp,
                     fontWeight = FontWeight.Bold
                 ),
-                modifier = Modifier.padding(bottom = 24.dp)
+                modifier = Modifier.padding(bottom = 16.dp)
             )
 
             // Dark mode setting
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 12.dp),
+                    .padding(vertical = 12.dp)
+                    .padding(horizontal = 8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
@@ -129,7 +130,8 @@ fun Settings(sharedViewModel: SharedViewModel, navController: NavHostController)
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 12.dp),
+                    .padding(vertical = 12.dp)
+                    .padding(horizontal = 8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
@@ -158,7 +160,8 @@ fun Settings(sharedViewModel: SharedViewModel, navController: NavHostController)
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 12.dp),
+                    .padding(vertical = 12.dp)
+                    .padding(horizontal = 8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(

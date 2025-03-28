@@ -37,7 +37,6 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -161,35 +160,25 @@ fun WorkoutLogApp(sharedViewModel: SharedViewModel) {
     }
 
     Scaffold(
-        modifier = Modifier
-            .fillMaxSize(),
-        topBar = {
-            TopAppBar(
-                title = {
-                    Box(
-                        modifier = Modifier.fillMaxWidth(),
-                        contentAlignment =  Alignment.Center
-                    ){
-                        Text(
-                            text = "Workout Log: $currentDate",
-                            style = MaterialTheme.typography.titleLarge.copy(
-                                fontSize = 26.sp,
-                                fontWeight = FontWeight.Bold
-                            ),
-                            modifier = Modifier
-                                .padding(bottom = 16.dp)
-                        )
-                    }
-                }
-            )
-        },
         snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { innerPadding ->
         Column(
             modifier = Modifier
                 .padding(innerPadding)
-                .padding(16.dp)
+                .padding(4.dp)
+                .fillMaxWidth()
         ) {
+            Text(
+                text = "Workout Log",
+                style = MaterialTheme.typography.titleLarge.copy(
+                    fontSize = 32.sp,
+                    fontWeight = FontWeight.Bold
+                ),
+                modifier = Modifier
+                    .padding(bottom = 16.dp)
+                    .align(Alignment.CenterHorizontally),
+            )
+
             // Date navigation
             Row(
                 modifier = Modifier
@@ -202,7 +191,7 @@ fun WorkoutLogApp(sharedViewModel: SharedViewModel) {
                 }
                 Spacer(modifier = Modifier.width(8.dp))
                 Button(onClick = { showDatePicker = true }) {
-                    Text("Today")
+                    Text(currentDate)
                     Icon(
                         imageVector = Icons.Default.ArrowDropDown,
                         contentDescription = "Dropdown"
@@ -308,6 +297,7 @@ fun WorkoutLogApp(sharedViewModel: SharedViewModel) {
                 modifier = Modifier
                     .fillMaxWidth()
                     .aspectRatio(1f)
+                    .weight(1f)
             ) {
                 AsyncImage(
                     model = bodyImage,
@@ -348,8 +338,7 @@ fun WorkoutLogApp(sharedViewModel: SharedViewModel) {
         if (showDatePicker) {
             DatePickerDialog(
                 onDismissRequest = { showDatePicker = false },
-                onDateSelected = { year, month, day ->
-                    val selectedDate = formatDate(year, month, day)
+                onDateSelected = { selectedDate ->
                     currentDate = selectedDate
                     showDatePicker = false
                 }
@@ -553,7 +542,10 @@ fun RoutineDialog(
                                             .background(Color.Red)
                                             .clickable {
                                                 sharedViewModel.removeRoutine(
-                                                    context.getSharedPreferences("app_prefs", Context.MODE_PRIVATE),
+                                                    context.getSharedPreferences(
+                                                        "app_prefs",
+                                                        Context.MODE_PRIVATE
+                                                    ),
                                                     routine
                                                 )
                                                 scope.launch {
@@ -857,7 +849,7 @@ fun SortByDialog(
 @Composable
 fun DatePickerDialog(
     onDismissRequest: () -> Unit,
-    onDateSelected: (year: Int, month: Int, day: Int) -> Unit
+    onDateSelected: (String) -> Unit
 ) {
     val calendar = Calendar.getInstance()
     var selectedMonth by remember { mutableIntStateOf(calendar.get(Calendar.MONTH)) }
@@ -869,8 +861,8 @@ fun DatePickerDialog(
             shape = MaterialTheme.shapes.medium,
             modifier = Modifier
                 .padding(16.dp)
-                .width(450.dp)
-                .height(400.dp)
+                .width(300.dp)
+                .height(500.dp)
         ) {
             Column(
                 modifier = Modifier
@@ -892,6 +884,7 @@ fun DatePickerDialog(
                             items = (1..12).toList(),
                             selectedItem = selectedMonth + 1,
                             onItemSelected = { selectedMonth = it - 1 },
+                            modifier = Modifier.height(380.dp)
                         )
                     }
 
@@ -906,6 +899,7 @@ fun DatePickerDialog(
                             items = (1..daysInMonth).toList(),
                             selectedItem = selectedDay,
                             onItemSelected = { selectedDay = it },
+                            modifier = Modifier.height(380.dp)
                         )
                     }
 
@@ -919,6 +913,7 @@ fun DatePickerDialog(
                             items = (2000..2100).toList(),
                             selectedItem = selectedYear,
                             onItemSelected = { selectedYear = it },
+                            modifier = Modifier.height(380.dp)
                         )
                     }
                 }
@@ -928,7 +923,8 @@ fun DatePickerDialog(
                 // Confirm
                 Button(
                     onClick = {
-                        onDateSelected(selectedYear, selectedMonth, selectedDay)
+                        val formattedDate = formatDate(selectedYear, selectedMonth, selectedDay)
+                        onDateSelected(formattedDate)
                     },
                     modifier = Modifier.fillMaxWidth()
                 ) {
@@ -944,6 +940,7 @@ fun ScrollablePicker(
     items: List<Int>,
     selectedItem: Int,
     onItemSelected: (Int) -> Unit,
+    modifier: Modifier = Modifier
 ) {
     val listState = rememberLazyListState()
 
@@ -955,7 +952,8 @@ fun ScrollablePicker(
     }
 
     LazyColumn(
-        state = listState
+        state = listState,
+        modifier = modifier
     ) {
         items(items) { item ->
             val isSelected = item == selectedItem
@@ -1038,10 +1036,10 @@ fun getDaysInMonth(year: Int, month: Int): Int {
 }
 
 fun formatDate(year: Int, month: Int, day: Int): String {
-    val calendar = Calendar.getInstance()
-    calendar.set(year, month, day)
-    val dateFormat = SimpleDateFormat("M-dd-yyyy", Locale.getDefault())
-    return dateFormat.format(calendar.time)
+    val calendar = Calendar.getInstance().apply {
+        set(year, month, day)
+    }
+    return SimpleDateFormat("M-dd-yyyy", Locale.getDefault()).format(calendar.time)
 }
 
 fun getCurrentDate(): String {
