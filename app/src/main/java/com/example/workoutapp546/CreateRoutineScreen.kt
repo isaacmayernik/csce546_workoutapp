@@ -1,16 +1,24 @@
 package com.example.workoutapp546
 
+import android.R.attr.onClick
 import android.content.Context
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -43,6 +51,9 @@ fun CreateRoutine(sharedViewModel: SharedViewModel, navController: NavHostContro
     val selectedWorkouts = remember { mutableStateListOf<RoutineWorkout>() }
     var routineName by remember { mutableStateOf("") }
 
+    var showWorkoutInfoDialog by remember { mutableStateOf(false) }
+    var selectedWorkoutInfo by remember { mutableStateOf("") }
+
     LaunchedEffect(selectedWorkouts) {
         sharedViewModel.setUnsavedChanges(selectedWorkouts.isNotEmpty())
     }
@@ -59,6 +70,27 @@ fun CreateRoutine(sharedViewModel: SharedViewModel, navController: NavHostContro
             Column(
                 modifier = Modifier.fillMaxSize()
             ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Create Routine",
+                        style = MaterialTheme.typography.titleLarge,
+                        modifier = Modifier.weight(1f)
+                    )
+                    IconButton(
+                        onClick = { showWorkoutInfoDialog = true },
+                        modifier = Modifier.size(24.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Info,
+                            contentDescription = "Workout Info")
+                    }
+                }
+
                 // Name routine
                 BasicTextField(
                     value = routineName,
@@ -93,7 +125,11 @@ fun CreateRoutine(sharedViewModel: SharedViewModel, navController: NavHostContro
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(8.dp),
+                                .padding(8.dp)
+                                .clickable {
+                                    selectedWorkoutInfo = workoutName
+                                    showWorkoutInfoDialog = true
+                                },
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
@@ -160,6 +196,39 @@ fun CreateRoutine(sharedViewModel: SharedViewModel, navController: NavHostContro
                     .padding(top = 16.dp)
             ) {
                 Text("Save Routine")
+            }
+
+            if (showWorkoutInfoDialog) {
+                AlertDialog(
+                    onDismissRequest = { showWorkoutInfoDialog = false },
+                    title = { Text("Workout Information") },
+                    text = {
+                        if (selectedWorkoutInfo.isNotEmpty()) {
+                            val muscleGroups = workoutMuscleMap[selectedWorkoutInfo]?.map {
+                                when {
+                                    it == "deltoids-rear" -> "rear deltoids"
+                                    it == "back-lower" -> "lower back"
+                                    it.contains("chest-") -> "chest"
+                                    else -> it.replace("-", " ")
+                                }
+                            }?.distinct()?.joinToString() ?: "N/A"
+
+                            Text("Selected workout: $selectedWorkoutInfo\n\n" +
+                                    "Affected muscles: $muscleGroups"
+                            )
+                        } else {
+                            Text("Click any workout to see detailed information about it " +
+                                    "including targeted muscle groups.")
+                        }
+                    },
+                    confirmButton = {
+                        Button(
+                            onClick = { showWorkoutInfoDialog = false }
+                        ) {
+                            Text("OK")
+                        }
+                    }
+                )
             }
         }
     }
