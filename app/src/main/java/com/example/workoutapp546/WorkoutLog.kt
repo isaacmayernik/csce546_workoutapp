@@ -782,7 +782,14 @@ fun SortByDialog(
     onDismissRequest: () -> Unit,
     onMuscleGroupSelected: (String) -> Unit
 ) {
-    val muscleGroups = workoutMuscleMap.values.flatten().toSet().toList().sorted()
+    val muscleGroups = workoutMuscleMap.values.flatten().toSet().toList().sortedBy { originalName ->
+        when {
+            originalName == "back-lower" -> "lower back"
+            originalName == "deltoids-rear" -> "rear deltoids"
+            originalName.contains("chest-") -> "chest"
+            else -> originalName
+        }
+    }
 
     Dialog(
         onDismissRequest = onDismissRequest
@@ -805,20 +812,36 @@ fun SortByDialog(
                 LazyColumn(
                     modifier = Modifier.heightIn(max = 300.dp)
                 ) {
-                    items(muscleGroups) { muscle ->
-                        val formattedMuscle = muscle
-                            .replace("-", " ") //replace hyphen with space
-                            .split(" ")
-                            .joinToString(" ") { word ->
-                                word.replaceFirstChar { it.uppercaseChar() }
-                            }
+                    items(muscleGroups.distinctBy {
+                        when {
+                            it.contains("chest-") -> "chest"
+                            else -> it
+                        }
+                    }) { muscle ->
+                        val formattedMuscle = when {
+                            muscle == "deltoids-rear" -> "Rear Deltoids"
+                            muscle == "back-lower" -> "Lower Back"
+                            muscle.contains("chest-") -> "Chest"
+                            else -> muscle
+                                .replace("-", " ")
+                                .split(" ")
+                                .joinToString(" ") { word ->
+                                    word.replaceFirstChar { it.uppercaseChar() }
+                                }
+                        }
 
                         Text(
                             text = formattedMuscle,
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clickable {
-                                    onMuscleGroupSelected(muscle)
+                                    val originalName = when (formattedMuscle) {
+                                        "Chest" -> if (muscle.contains("left")) "chest-left" else "chest-right"
+                                        "Rear Deltoids" -> "deltoids-rear"
+                                        "Lower Back" -> "back-lower"
+                                        else -> muscle
+                                    }
+                                    onMuscleGroupSelected(originalName)
                                     onDismissRequest()
                                 }
                                 .padding(8.dp),
