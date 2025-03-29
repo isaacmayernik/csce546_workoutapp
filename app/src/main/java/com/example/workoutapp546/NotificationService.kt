@@ -5,6 +5,7 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.os.Build
+import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.edit
@@ -51,26 +52,25 @@ class NotificationService(private val context: Context) {
         if (!areNotificationsEnabled()) return
 
         val now = System.currentTimeMillis()
-        val calendar = Calendar.getInstance().apply {
-            timeInMillis = now
-        }
-
-        // Check if between 9am-7pm LOCAL TIME
+        val calendar = Calendar.getInstance().apply { timeInMillis = now }
         val hour = calendar.get(Calendar.HOUR_OF_DAY)
-        if (hour < 9 || hour >= 19) {
+        val minute = calendar.get(Calendar.MINUTE)
+
+        // Strict time window check (9:00 AM to 6:59 PM)
+        if (hour !in 9..18) {
+            Log.d("Notification", "Outside time window - $hour:$minute")
             return
         }
 
+        // Check if already shown today
         val lastNotificationTime = prefs.getLong(PREF_LAST_NOTIFICATION_TIME, 0)
-        if (lastNotificationTime > 0) {
-            val lastCalendar = Calendar.getInstance().apply {
-                timeInMillis = lastNotificationTime
-            }
-            if (lastCalendar.get(Calendar.DAY_OF_YEAR) == calendar.get(Calendar.DAY_OF_YEAR) &&
-                lastCalendar.get(Calendar.YEAR) == calendar.get(Calendar.YEAR)) {
-                return
-            }
+        if (lastNotificationTime > 0 && isSameDay(lastNotificationTime, now)) {
+            Log.d("Notification", "Already shown notification today")
+            return
         }
+
+        // Rest of your notification code...
+        Log.d("Notification", "Showing notification at $hour:$minute")
 
         // Create and show notification
         val randomMessage = motivationalMessages.random()
@@ -123,6 +123,10 @@ class NotificationService(private val context: Context) {
     // get user's notification pref in app
     fun getNotificationPreference(): Boolean {
         return prefs.getBoolean(PREF_NOTIFICATION_ENABLED, false)
+    }
+
+    fun getLastNotificationTime(): Long {
+        return prefs.getLong(PREF_LAST_NOTIFICATION_TIME, 0)
     }
 
 //    // Function for testing if notifications get sent

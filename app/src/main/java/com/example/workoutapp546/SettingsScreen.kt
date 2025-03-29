@@ -31,6 +31,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
+import androidx.work.WorkInfo
+import androidx.work.WorkManager
+import java.text.SimpleDateFormat
+import java.util.Locale
 
 @Composable
 fun Settings(sharedViewModel: SharedViewModel, navController: NavHostController) {
@@ -43,6 +47,7 @@ fun Settings(sharedViewModel: SharedViewModel, navController: NavHostController)
 
     var isDarkMode by remember { mutableStateOf(sharedViewModel.isDarkMode) }
     var notificationsEnabled by remember { mutableStateOf(notificationService.areNotificationsEnabled()) }
+    var nextNotificationTime by remember { mutableStateOf("Calculating...") }
 
     // launcher for opening notifications settings
     // also handles result -- if user does not enable in system settings, display a snackbar
@@ -73,11 +78,34 @@ fun Settings(sharedViewModel: SharedViewModel, navController: NavHostController)
         }
     }
 
+    fun updateNextNotificationTime() {
+        WorkManager.getInstance(context).getWorkInfosForUniqueWorkLiveData(NotificationWorker.WORK_NAME)
+            .observeForever { workInfos ->
+                workInfos?.firstOrNull()?.let { workInfo ->
+                    if (workInfo.state == WorkInfo.State.ENQUEUED) {
+                        val nextRunTime = workInfo.nextScheduleTimeMillis
+                        if (nextRunTime > 0) {
+                            val dateFormat = SimpleDateFormat("MMM d, h:mm a", Locale.getDefault())
+                            nextNotificationTime = dateFormat.format(nextRunTime)
+                        } else {
+                            nextNotificationTime = "Not scheduled - 1"
+                        }
+                    } else {
+                        nextNotificationTime = "Not scheduled - 2"
+                    }
+                } ?: run {
+                    nextNotificationTime = "Not scheduled - 3"
+                }
+            }
+    }
+
     LaunchedEffect(Unit) {
         if (sharedViewModel.routineJustCreated) {
             snackbarHostState.showSnackbar("Routine created successfully!")
             sharedViewModel.resetRoutineCreated()
         }
+
+        updateNextNotificationTime()
     }
 
     Scaffold(
@@ -90,20 +118,11 @@ fun Settings(sharedViewModel: SharedViewModel, navController: NavHostController)
                 .fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text(
-                text = "Settings",
-                style = MaterialTheme.typography.titleLarge.copy(
-                    fontSize = 32.sp,
-                    fontWeight = FontWeight.Bold
-                ),
-                modifier = Modifier.padding(bottom = 16.dp)
-            )
-
             // Dark mode setting
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 12.dp)
+                    .padding(vertical = 8.dp)
                     .padding(horizontal = 8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -130,7 +149,7 @@ fun Settings(sharedViewModel: SharedViewModel, navController: NavHostController)
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 12.dp)
+                    .padding(vertical = 8.dp)
                     .padding(horizontal = 8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -160,7 +179,7 @@ fun Settings(sharedViewModel: SharedViewModel, navController: NavHostController)
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 12.dp)
+                    .padding(vertical = 8.dp)
                     .padding(horizontal = 8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -191,6 +210,24 @@ fun Settings(sharedViewModel: SharedViewModel, navController: NavHostController)
                     modifier = Modifier.wrapContentSize()
                 )
             }
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp)
+                    .padding(horizontal = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    "Next notification: $nextNotificationTime",
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Medium
+                    ),
+                    modifier = Modifier.weight(1f)
+                )
+            }
         }
     }
+
 }
