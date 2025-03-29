@@ -1,4 +1,4 @@
-package com.example.workoutapp546
+package com.example.workoutapp546.screens
 
 import android.content.Context
 import android.content.Intent
@@ -31,6 +31,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
+import com.example.workoutapp546.NotificationService
+import com.example.workoutapp546.SharedViewModel
 import java.text.SimpleDateFormat
 import java.util.Locale
 

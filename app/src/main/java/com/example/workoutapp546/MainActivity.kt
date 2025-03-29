@@ -36,6 +36,10 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.example.workoutapp546.screens.CreateRoutine
+import com.example.workoutapp546.screens.Goals
+import com.example.workoutapp546.screens.Settings
+import com.example.workoutapp546.screens.WorkoutLogApp
 import com.example.workoutapp546.ui.theme.WorkoutApp546Theme
 
 class MainActivity : ComponentActivity() {

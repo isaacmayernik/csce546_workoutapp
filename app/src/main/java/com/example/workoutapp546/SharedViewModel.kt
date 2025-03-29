@@ -9,6 +9,8 @@ import androidx.lifecycle.ViewModel
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import androidx.core.content.edit
+import com.example.workoutapp546.screens.Goal
+import com.example.workoutapp546.screens.Routine
 
 class SharedViewModel : ViewModel() {
     var savedGoals by mutableStateOf<List<Goal>>(emptyList())

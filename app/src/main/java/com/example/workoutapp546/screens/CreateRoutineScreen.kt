@@ -1,6 +1,5 @@
-package com.example.workoutapp546
+package com.example.workoutapp546.screens
 
-import android.R.attr.onClick
 import android.content.Context
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -38,6 +37,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
+import com.example.workoutapp546.SharedViewModel
+import com.example.workoutapp546.workoutMuscleMap
 import kotlinx.coroutines.launch
 
 @Composable
