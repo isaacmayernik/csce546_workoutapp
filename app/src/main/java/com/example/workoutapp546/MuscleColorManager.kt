@@ -8,6 +8,13 @@ import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import androidx.core.content.edit
 
+data class AnimationState(
+    val isAnimating: Boolean = false,
+    val currentMuscle: String? = null,
+    val currentColor: Color = Color(0xFF18CB65)
+)
+
+
 // define color level based on number of sets
 fun getMuscleColor(sets: Int): Color {
     return when (sets) {
@@ -28,7 +35,7 @@ val workoutMuscleMap = mapOf(
     "Bench press" to listOf("chest-left", "chest-right"),
     "Bicycle crunches" to listOf("ab", "oblique"),
     "Cable chest fly" to listOf("chest-left", "chest-right"),
-    "Cable lat pulldown" to listOf("trapezius"),
+    "Cable lat pulldown" to listOf("trapezius", "back-lower", "bicep"),
     "Cable row" to listOf("trapezius", "back-lower", "bicep"),
     "Cable tricep pushdown" to listOf("tricep", "shoulder-deltoid"),
     "Calf raises" to listOf("calf"),
@@ -98,4 +105,8 @@ fun loadMuscleState(sharedPreferences: SharedPreferences, date: String): Mutable
     }
 
     return muscleStates
+}
+
+fun getColorTransition(currentSets: Int, targetSets: Int): List<Color> {
+    return (currentSets..targetSets).map { getMuscleColor(it) }
 }

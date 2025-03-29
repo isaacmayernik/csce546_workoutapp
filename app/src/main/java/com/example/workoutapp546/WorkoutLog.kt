@@ -56,10 +56,8 @@ import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import coil.compose.AsyncImage
 import com.google.gson.Gson
@@ -71,6 +69,7 @@ import java.util.Date
 import java.util.Locale
 import androidx.core.content.edit
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 
 data class Workout(
@@ -127,8 +126,14 @@ fun WorkoutLogApp(sharedViewModel: SharedViewModel) {
     var selectedSets by remember { mutableIntStateOf(0) }
     val workoutNames by remember { mutableStateOf(workoutMuscleMap.keys.toList()) }
     val workouts = remember { mutableStateListOf<Workout>() }
-    val muscleStates = remember { mutableStateMapOf<String, Color>() }
-    val muscleStatesHistory = remember { mutableStateMapOf<String, MutableList<Pair<Map<String, Color>, List<Workout>>>>() }
+    val muscleStates = remember {
+        mutableStateMapOf<String, Color>().apply {
+            workoutMuscleMap.values.flatten().toSet().forEach { muscle ->
+                this[muscle] = Color(0xFF18CB65)
+            }
+        }
+    }
+    val workoutHistory = remember { mutableStateMapOf<String, MutableList<Pair<Map<String, Color>, List<Workout>>>>() }
     val hasChanges = remember { mutableStateOf(sharedViewModel.hasChangesMap[currentDate] == true) }
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
@@ -138,17 +143,40 @@ fun WorkoutLogApp(sharedViewModel: SharedViewModel) {
 
     val bodyImage = if (sharedViewModel.isDarkMode) R.drawable.dm_blank_body else R.drawable.blank_body
 
+    var animationState by remember { mutableStateOf(AnimationState()) }
+    var targetSets by remember { mutableIntStateOf(0) }
+
     LaunchedEffect(currentDate) {
         selectedWorkout = ""
         selectedSets = 0
+
+        val (loadedWorkouts, loadedMuscleSets, hasSavedWorkouts) = loadWorkouts(sharedPreferences, currentDate)
         workouts.clear()
-        workouts.addAll(loadWorkouts(sharedPreferences, currentDate))
-        sharedViewModel.loadGoals(sharedPreferences)
+        workouts.addAll(loadedWorkouts)
+        val savedMuscleStates = loadMuscleState(sharedPreferences, currentDate)
         muscleStates.clear()
-        muscleStates.putAll(loadMuscleState(sharedPreferences, currentDate))
+        muscleStates.putAll(savedMuscleStates)
+
+        workoutMuscleMap.values.flatten().toSet().forEach { muscle ->
+            if (!muscleStates.containsKey(muscle)) {
+                muscleStates[muscle] = Color(0xFF18CB65)
+            }
+        }
+
+        loadedMuscleSets.forEach { (muscle, sets) ->
+            muscleStates[muscle] = getMuscleColor(sets)
+        }
+
+        workoutHistory[currentDate] = if (hasSavedWorkouts) {
+            mutableStateListOf(Pair(muscleStates.toMap(), loadedWorkouts.toList()))
+        } else {
+            mutableStateListOf()
+        }
+
+        sharedViewModel.loadGoals(sharedPreferences)
         sharedViewModel.loadChangesState(sharedPreferences)
-        hasChanges.value = sharedViewModel.hasChangesMap[currentDate] == true
-        muscleStatesHistory[currentDate]?.clear()
+        sharedViewModel.setHasChanges(currentDate, hasSavedWorkouts, sharedPreferences)
+        hasChanges.value = hasSavedWorkouts
     }
 
     LaunchedEffect(resetTriggered) {
@@ -156,6 +184,41 @@ fun WorkoutLogApp(sharedViewModel: SharedViewModel) {
             muscleStates.clear()
             muscleStates.putAll(loadMuscleState(sharedPreferences, currentDate))
             resetTriggered = false
+        }
+    }
+
+    LaunchedEffect(animationState.isAnimating) {
+        if (animationState.isAnimating) {
+            val affectedMuscles = workoutMuscleMap[selectedWorkout] ?: listOf()
+
+            affectedMuscles.forEach { muscle ->
+                val currentColor = muscleStates[muscle] ?: Color(0xFF18CB65)
+                val currentSets = when (currentColor) {
+                    Color(0xFF18CB65) -> 0
+                    Color(0xFFA8E02A) -> 1
+                    Color(0xFFFFFF2D) -> 2
+                    Color(0xFFFFD21F) -> 3
+                    Color(0xFFFFB30A) -> 4
+                    Color(0xFFCE3135) -> 5
+                    else -> 0
+                }
+
+                val targetSets = currentSets + selectedSets
+                val steps = getColorTransition(currentSets, targetSets)
+
+                steps.forEach { color ->
+                    animationState = animationState.copy(
+                        currentMuscle = muscle,
+                        currentColor = color
+                    )
+                    muscleStates[muscle] = color
+                    delay(300) // Reduced delay for smoother animation
+                }
+            }
+
+            // Save final state
+            saveMuscleState(sharedPreferences, currentDate, muscleStates)
+            animationState = AnimationState()
         }
     }
 
@@ -168,17 +231,6 @@ fun WorkoutLogApp(sharedViewModel: SharedViewModel) {
                 .padding(4.dp)
                 .fillMaxWidth()
         ) {
-            Text(
-                text = "Workout Log",
-                style = MaterialTheme.typography.titleLarge.copy(
-                    fontSize = 32.sp,
-                    fontWeight = FontWeight.Bold
-                ),
-                modifier = Modifier
-                    .padding(bottom = 16.dp)
-                    .align(Alignment.CenterHorizontally),
-            )
-
             // Date navigation
             Row(
                 modifier = Modifier
@@ -205,28 +257,32 @@ fun WorkoutLogApp(sharedViewModel: SharedViewModel) {
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            Row (
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 8.dp),
-                horizontalArrangement = Arrangement.SpaceEvenly,
-                verticalAlignment = Alignment.CenterVertically
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Button(
-                    onClick = { showWorkoutDialog = true },
-                    modifier = Modifier.weight(.5f)
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Text(selectedWorkout.ifEmpty { "Select Workout" })
-                }
-                Spacer(modifier = Modifier.width(8.dp))
+                    Button(
+                        onClick = { showWorkoutDialog = true },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text(selectedWorkout.ifEmpty { "Select Workout" })
+                    }
 
-                Button(
-                    onClick = { showRoutineDialog = true },
-                    modifier = Modifier.weight(.5f)
-                ) {
-                    Text("Use Routine")
+                    Spacer(modifier = Modifier.width(16.dp))
+
+                    Button(
+                        onClick = { showRoutineDialog = true },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text("Use Routine")
+                    }
                 }
-                Spacer(modifier = Modifier.width(8.dp))
             }
 
             Row(
@@ -256,31 +312,14 @@ fun WorkoutLogApp(sharedViewModel: SharedViewModel) {
                                 snackbarHostState.showSnackbar("Please select a workout from the dropdown.")
                             }
                         } else if (selectedSets > 0) {
-                            val historyForDate = muscleStatesHistory.getOrPut(currentDate) { mutableStateListOf() }
+                            val historyForDate = workoutHistory.getOrPut(currentDate) { mutableStateListOf() }
                             historyForDate.add(Pair(muscleStates.toMap(), workouts.toList()))
 
-                            val affectedMuscles = workoutMuscleMap[selectedWorkout] ?: listOf()
-                            val updatedMuscleStates = muscleStates.toMutableMap()
-                            affectedMuscles.forEach { muscle ->
-                                val currentSets = updatedMuscleStates[muscle]?.let { color ->
-                                    when (color) {
-                                        Color(0xFF18CB65) -> 0
-                                        Color(0xFFA8E02A) -> 1
-                                        Color(0xFFFFFF2D) -> 2
-                                        Color(0xFFFFD21F) -> 3
-                                        Color(0xFFFFB30A) -> 4
-                                        Color(0xFFCE3135) -> 5
-                                        Color(0xFFCE3135) -> 6
-                                        else -> 0
-                                    }
-                                } ?: 0
-                                val totalSets = currentSets + selectedSets
+                            targetSets = selectedSets
+                            targetSets = selectedSets
+                            animationState = animationState.copy(isAnimating = true)
 
-                                updatedMuscleStates[muscle] = getMuscleColor(totalSets)
-                            }
-                            muscleStates.clear()
-                            muscleStates.putAll(updatedMuscleStates)
-                            saveMuscleState(sharedPreferences, currentDate, updatedMuscleStates)
+                            saveMuscleState(sharedPreferences, currentDate, muscleStates)
                             sharedViewModel.setHasChanges(currentDate, true, sharedPreferences)
                             hasChanges.value = true
                             sharedViewModel.saveChangesState(sharedPreferences)
@@ -296,40 +335,65 @@ fun WorkoutLogApp(sharedViewModel: SharedViewModel) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .aspectRatio(1f)
                     .weight(1f)
             ) {
-                AsyncImage(
-                    model = bodyImage,
-                    contentDescription = "Full Body Diagram",
-                )
-
-                MuscleGroupsView(muscleStates)
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize(),
+                    verticalArrangement = Arrangement.Bottom,
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .aspectRatio(1f)
+                    ) {
+                        AsyncImage(
+                            model = bodyImage,
+                            contentDescription = "Full Body Diagram",
+                            modifier = Modifier.fillMaxSize()
+                        )
+                        MuscleGroupsView(muscleStates, animationState)
+                    }
+                }
             }
         }
 
         val onUndoLastSave = {
-            val historyForDate = muscleStatesHistory[currentDate]
-            if (historyForDate != null && historyForDate.isNotEmpty()) {
+            val historyForDate = workoutHistory[currentDate]
+            if (historyForDate != null && historyForDate.size > 1) {
                 val (previousMuscleState, previousWorkouts) = historyForDate.removeAt(historyForDate.size - 1)
+
                 muscleStates.clear()
                 muscleStates.putAll(previousMuscleState)
                 saveMuscleState(sharedPreferences, currentDate, previousMuscleState)
 
                 workouts.clear()
-                workouts.addAll(loadWorkouts(sharedPreferences, currentDate))
-                saveWorkouts(sharedPreferences, currentDate, previousWorkouts)
+                workouts.addAll(previousWorkouts)
 
-                hasChanges.value = historyForDate.isNotEmpty()
+                val muscleSets = mutableMapOf<String, Int>()
+                previousWorkouts.forEach { workout ->
+                    val muscles = workoutMuscleMap[workout.name] ?: listOf()
+                    muscles.forEach { muscle ->
+                        muscleSets[muscle] = (muscleSets[muscle] ?: 0) + workout.sets.size
+                    }
+                }
+
+                val gson = Gson()
+                sharedPreferences.edit {
+                    putString(currentDate, gson.toJson(previousWorkouts))
+                    putString("${currentDate}_muscle_sets", gson.toJson(muscleSets))
+                }
+
+                hasChanges.value = historyForDate.size > 1
                 sharedViewModel.setHasChanges(currentDate, hasChanges.value, sharedPreferences)
 
-                showWorkoutDialog = false
                 scope.launch {
-                    snackbarHostState.showSnackbar("Done!")
+                    snackbarHostState.showSnackbar("Changes undone")
                 }
             } else {
                 scope.launch {
-                    snackbarHostState.showSnackbar("No recent changes to undo.")
+                    snackbarHostState.showSnackbar("Nothing to undo")
                 }
             }
             Unit
@@ -356,7 +420,7 @@ fun WorkoutLogApp(sharedViewModel: SharedViewModel) {
                 onResetWorkouts = { showResetConfirmation = true },
                 onUndoLastSave = onUndoLastSave,
                 hasChanges = hasChanges.value,
-                hasHistory = muscleStatesHistory[currentDate]?.isNotEmpty() == true
+                hasHistory = workouts.isNotEmpty() || workoutHistory[currentDate]?.isNotEmpty() == true
             )
         }
 
@@ -374,29 +438,20 @@ fun WorkoutLogApp(sharedViewModel: SharedViewModel) {
                             ) == SnackbarResult.ActionPerformed
                         }
                         if (confirm) {
-                            val historyForDate = muscleStatesHistory.getOrPut(currentDate) { mutableStateListOf() }
+                            val historyForDate = workoutHistory.getOrPut(currentDate) { mutableStateListOf() }
                             historyForDate.add(Pair(muscleStates.toMap(), workouts.toList()))
 
                             routine.workouts.forEach { workout ->
-                                val affectedMuscles = workoutMuscleMap[workout.name] ?: listOf()
-                                affectedMuscles.forEach { muscle ->
-                                    val currentSets = muscleStates[muscle]?.let { color ->
-                                        when (color) {
-                                            Color(0xFF18CB65) -> 0
-                                            Color(0xFFA8E02A) -> 1
-                                            Color(0xFFFFFF2D) -> 2
-                                            Color(0xFFFFD21F) -> 3
-                                            Color(0xFFFFB30A) -> 4
-                                            Color(0xFFCE3135) -> 5
-                                            Color(0xFFCE3135) -> 6
-                                            else -> 0
-                                        }
-                                    } ?: 0
-                                    val totalSets = currentSets + workout.sets
-                                    muscleStates[muscle] = getMuscleColor(totalSets)
+                                targetSets = workout.sets
+                                animationState = animationState.copy(isAnimating = true)
+
+                                while (animationState.isAnimating) {
+                                    delay(100)
                                 }
-                                workouts.add(Workout(workout.name, List(workout.sets) { WorkoutSet(0) }))
+
+                                workouts.add(Workout(workout.name, List(workout.sets) { WorkoutSet(0) }) )
                             }
+
                             saveMuscleState(sharedPreferences, currentDate, muscleStates)
                             saveWorkouts(sharedPreferences, currentDate, workouts)
                             sharedViewModel.setHasChanges(currentDate, true, sharedPreferences)
@@ -419,11 +474,19 @@ fun WorkoutLogApp(sharedViewModel: SharedViewModel) {
                 confirmButton = {
                     Button(
                         onClick = {
-                            muscleStatesHistory[currentDate]?.clear()
-                            muscleStates.clear()
-                            saveMuscleState(sharedPreferences, currentDate, muscleStates)
+                            workoutHistory[currentDate]?.clear()
                             workouts.clear()
-                            saveWorkouts(sharedPreferences, currentDate, workouts)
+                            muscleStates.clear()
+                            workoutMuscleMap.values.flatten().toSet().forEach { muscle ->
+                                muscleStates[muscle] = Color(0xFF18CB65)
+                            }
+                            saveMuscleState(sharedPreferences, currentDate, muscleStates)
+
+                            sharedPreferences.edit {
+                                remove(currentDate)
+                                remove("${currentDate}_muscle_sets")
+                                remove("muscle_state_$currentDate")
+                            }
 
                             hasChanges.value = false
                             sharedViewModel.setHasChanges(currentDate, false, sharedPreferences)
@@ -452,7 +515,10 @@ fun WorkoutLogApp(sharedViewModel: SharedViewModel) {
 }
 
 @Composable
-fun MuscleGroupsView(muscleStates: Map<String, Color>) {
+fun MuscleGroupsView(
+    muscleStates: Map<String, Color>,
+    animationState: AnimationState
+) {
     // Map muscle names to their respective drawable resources
     val muscleDrawableMap = mapOf(
         "ab" to R.drawable.abs,
@@ -479,16 +545,29 @@ fun MuscleGroupsView(muscleStates: Map<String, Color>) {
         "vastus-medialis" to R.drawable.vastus_medialis,
     )
 
-    // Iterate through muscleStates and display each muscle group
     muscleStates.forEach { (muscle, color) ->
+        if (muscle != animationState.currentMuscle) {
+            val drawableRes = muscleDrawableMap[muscle]
+            if (drawableRes != null) {
+                AsyncImage(
+                    model = drawableRes,
+                    contentDescription = muscle,
+                    modifier = Modifier.fillMaxSize(),
+                    colorFilter = ColorFilter.tint(color)
+                )
+            }
+        }
+    }
+
+    // Draw the currently animating muscle on top
+    animationState.currentMuscle?.let { muscle ->
         val drawableRes = muscleDrawableMap[muscle]
         if (drawableRes != null) {
             AsyncImage(
                 model = drawableRes,
                 contentDescription = muscle,
-                modifier = Modifier
-                    .fillMaxSize(),
-                colorFilter = ColorFilter.tint(color)
+                modifier = Modifier.fillMaxSize(),
+                colorFilter = ColorFilter.tint(animationState.currentColor)
             )
         }
     }
@@ -1064,18 +1143,33 @@ fun getNextDate(currentDate: String): String {
 }
 
 fun saveWorkouts(sharedPreferences: SharedPreferences, date: String, workouts: List<Workout>) {
+    val muscleSets = mutableMapOf<String, Int>()
+
+    workouts.forEach { workout ->
+        val muscles = workoutMuscleMap[workout.name] ?: listOf()
+        muscles.forEach { muscle ->
+            muscleSets[muscle] = (muscleSets[muscle] ?: 0) + workout.sets.size
+        }
+    }
+
     val gson = Gson()
-    val json = gson.toJson(workouts)
-    sharedPreferences.edit { putString(date, json) }
+    sharedPreferences.edit {
+        putString(date, gson.toJson(workouts))
+        putString("${date}_muscle_sets", gson.toJson(muscleSets))
+    }
 }
 
-fun loadWorkouts(sharedPreferences: SharedPreferences, date: String): List<Workout> {
+fun loadWorkouts(sharedPreferences: SharedPreferences, date: String): Triple<List<Workout>, Map<String, Int>, Boolean> {
     val gson = Gson()
-    val json = sharedPreferences.getString(date, null)
-    return if (json != null) {
+    val workouts = sharedPreferences.getString(date, null)?.let {
         val type = object : TypeToken<List<Workout>>() {}.type
-        gson.fromJson(json, type)
-    } else {
-        emptyList()
-    }
+        gson.fromJson<List<Workout>>(it, type) ?: emptyList()
+    } ?: emptyList()
+
+    val muscleSets = sharedPreferences.getString("${date}_muscle_sets", null)?.let {
+        val type = object : TypeToken<Map<String, Int>>() {}.type
+        gson.fromJson<Map<String, Int>>(it, type) ?: emptyMap()
+    } ?: emptyMap()
+
+    return Triple(workouts, muscleSets, workouts.isNotEmpty())
 }
