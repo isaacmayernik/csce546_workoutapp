@@ -84,19 +84,13 @@ class NotificationService(private val context: Context) {
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
 
-        val builder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            NotificationCompat.Builder(context, CHANNEL_ID)
-        } else {
-            NotificationCompat.Builder(context, "").apply {
-                setPriority(NotificationCompat.PRIORITY_DEFAULT)
-            }
-        }
-
-        builder.setSmallIcon(R.drawable.ic_notification)
+        val builder = NotificationCompat.Builder(context, CHANNEL_ID)
+            .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle("Workout App")
             .setContentText(randomMessage)
             .setContentIntent(activityPendingIntent)
             .setAutoCancel(true)
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .setWhen(System.currentTimeMillis())
             .setShowWhen(true)
 
