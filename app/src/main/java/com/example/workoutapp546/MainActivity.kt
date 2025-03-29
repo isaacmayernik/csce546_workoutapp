@@ -69,9 +69,6 @@ class MainActivity : ComponentActivity() {
                 NotificationManager.IMPORTANCE_DEFAULT
             ).apply {
                 description = "Daily motivational messages"
-                enableLights(true)
-                enableVibration(true)
-                setShowBadge(true)
             }
 
             val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager

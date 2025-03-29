@@ -19,3 +19,10 @@
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
+
+# Keep WorkManager and your worker
+-keep class com.example.workoutapp546.NotificationWorker
+-keep class com.example.workoutapp546.AppStartup
+
+# WorkManager internals
+-keep class androidx.work.** { *; }
