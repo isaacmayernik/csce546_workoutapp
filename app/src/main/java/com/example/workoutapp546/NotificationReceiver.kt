@@ -7,8 +7,12 @@ import android.content.Intent
 class NotificationReceiver: BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent?) {
         val service = NotificationService(context)
+
         if (service.getNotificationPreference()) {
             service.showNotification()
         }
+
+        service.setNextAlarmTime(0)
+        AppStartup().create(context)
     }
 }

@@ -31,8 +31,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
-import androidx.work.WorkInfo
-import androidx.work.WorkManager
 import java.text.SimpleDateFormat
 import java.util.Locale
 
@@ -67,6 +65,16 @@ fun Settings(sharedViewModel: SharedViewModel, navController: NavHostController)
         }
     }
 
+    fun updateNotificationTime() {
+        val nextAlarmTime = notificationService.getNextAlarmTime()
+        if (nextAlarmTime > 0) {
+            val dateFormat = SimpleDateFormat("MMM d, h:mm a", Locale.getDefault())
+            nextNotificationTime = dateFormat.format(nextAlarmTime)
+        } else {
+            nextNotificationTime = "Not scheduled"
+        }
+    }
+
     LaunchedEffect(sharedViewModel.isDarkMode) {
         isDarkMode = sharedViewModel.isDarkMode
     }
@@ -78,34 +86,12 @@ fun Settings(sharedViewModel: SharedViewModel, navController: NavHostController)
         }
     }
 
-    fun updateNextNotificationTime() {
-        WorkManager.getInstance(context).getWorkInfosForUniqueWorkLiveData(NotificationWorker.WORK_NAME)
-            .observeForever { workInfos ->
-                workInfos?.firstOrNull()?.let { workInfo ->
-                    if (workInfo.state == WorkInfo.State.ENQUEUED) {
-                        val nextRunTime = workInfo.nextScheduleTimeMillis
-                        if (nextRunTime > 0) {
-                            val dateFormat = SimpleDateFormat("MMM d, h:mm a", Locale.getDefault())
-                            nextNotificationTime = dateFormat.format(nextRunTime)
-                        } else {
-                            nextNotificationTime = "Not scheduled - 1"
-                        }
-                    } else {
-                        nextNotificationTime = "Not scheduled - 2"
-                    }
-                } ?: run {
-                    nextNotificationTime = "Not scheduled - 3"
-                }
-            }
-    }
-
     LaunchedEffect(Unit) {
         if (sharedViewModel.routineJustCreated) {
             snackbarHostState.showSnackbar("Routine created successfully!")
             sharedViewModel.resetRoutineCreated()
         }
-
-        updateNextNotificationTime()
+        updateNotificationTime()
     }
 
     Scaffold(

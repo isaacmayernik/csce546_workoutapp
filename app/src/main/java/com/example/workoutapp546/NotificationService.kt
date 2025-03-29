@@ -4,7 +4,6 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
-import android.os.Build
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
@@ -22,6 +21,7 @@ class NotificationService(private val context: Context) {
         const val PREF_NOTIFICATION_REQUESTED = "notification_requested"
         const val PREF_NOTIFICATION_ENABLED = "notification_enabled"
         const val PREF_LAST_NOTIFICATION_TIME = "last_notification_time"
+        const val PREF_NEXT_ALARM_TIME = "next_alarm_time"
 
         val motivationalMessages = listOf(
             "Keep up the great work!",
@@ -127,6 +127,14 @@ class NotificationService(private val context: Context) {
 
     fun getLastNotificationTime(): Long {
         return prefs.getLong(PREF_LAST_NOTIFICATION_TIME, 0)
+    }
+
+    fun setNextAlarmTime(timeMillis: Long) {
+        prefs.edit { putLong(PREF_NEXT_ALARM_TIME, timeMillis) }
+    }
+
+    fun getNextAlarmTime(): Long {
+        return prefs.getLong(PREF_NEXT_ALARM_TIME, 0)
     }
 
 //    // Function for testing if notifications get sent
