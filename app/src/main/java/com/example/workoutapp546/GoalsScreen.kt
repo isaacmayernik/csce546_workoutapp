@@ -162,16 +162,6 @@ fun Goals(sharedViewModel: SharedViewModel, navController: NavHostController) {
                 .fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Text(
-                text = "Enter in Goals!",
-                style = MaterialTheme.typography.titleLarge.copy(
-                    fontSize = 32.sp,
-                    fontWeight = FontWeight.Bold
-                ),
-                modifier = Modifier
-                    .padding(bottom = 16.dp)
-            )
-
             if (currentGoal != null) {
                 Text(
                     text = "Last Updated: ${currentGoal.lastUpdated}",
