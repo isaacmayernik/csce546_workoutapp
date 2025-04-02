@@ -197,14 +197,7 @@ fun WorkoutLogApp(sharedViewModel: SharedViewModel) {
     }
 
     Scaffold(
-        snackbarHost = { SnackbarHost(snackbarHostState) }
-    ) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .padding(innerPadding)
-                .padding(4.dp)
-                .fillMaxWidth()
-        ) {
+        topBar = {
             // Date navigation
             Row(
                 modifier = Modifier
@@ -216,46 +209,56 @@ fun WorkoutLogApp(sharedViewModel: SharedViewModel) {
                     Text("<")
                 }
                 Spacer(modifier = Modifier.width(8.dp))
-                Button(onClick = { showDatePicker = true }) {
-                    Text(currentDate)
-                    Icon(
-                        imageVector = Icons.Default.ArrowDropDown,
-                        contentDescription = "Dropdown"
-                    )
+                Button(
+                    onClick = { showDatePicker = true },
+                    modifier = Modifier.fillMaxWidth(0.45f)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Text(currentDate)
+                        Icon(
+                            imageVector = Icons.Default.ArrowDropDown,
+                            contentDescription = "Dropdown"
+                        )
+                    }
                 }
                 Spacer(modifier = Modifier.width(8.dp))
                 Button(onClick = { currentDate = getNextDate(currentDate) }) {
                     Text(">")
                 }
             }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalAlignment = Alignment.CenterHorizontally
+        },
+        snackbarHost = { SnackbarHost(snackbarHostState) }
+    ) { innerPadding ->
+        Column(
+            modifier = Modifier
+                .padding(innerPadding)
+                .padding(4.dp)
+                .fillMaxWidth()
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween
+                Button(
+                    onClick = { showWorkoutDialog = true },
+                    modifier = Modifier.weight(1f)
                 ) {
-                    Button(
-                        onClick = { showWorkoutDialog = true },
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Text(selectedWorkout.ifEmpty { "Select Workout" })
-                    }
+                    Text(selectedWorkout.ifEmpty { "Select Workout" })
+                }
 
-                    Spacer(modifier = Modifier.width(16.dp))
+                Spacer(modifier = Modifier.width(16.dp))
 
-                    Button(
-                        onClick = { showRoutineDialog = true },
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Text("Use Routine")
-                    }
+                Button(
+                    onClick = { showRoutineDialog = true },
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text("Use Routine")
                 }
             }
 

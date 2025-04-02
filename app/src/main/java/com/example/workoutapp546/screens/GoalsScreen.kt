@@ -15,7 +15,6 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
@@ -33,11 +32,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.navigation.NavHostController
 import com.example.workoutapp546.Screen
 import com.example.workoutapp546.SharedViewModel
 import com.example.workoutapp546.getCurrentDate
+import com.example.workoutapp546.ui.theme.Dimensions
 import com.github.mikephil.charting.charts.LineChart
 import com.github.mikephil.charting.components.XAxis
 import com.github.mikephil.charting.data.Entry
@@ -76,6 +77,18 @@ fun Goals(sharedViewModel: SharedViewModel, navController: NavHostController) {
     var showCaloriesLeft by remember { mutableStateOf(false) }
     var description by remember { mutableStateOf("") }
     var hasChanges by remember { mutableStateOf(false) }
+
+    // text styles
+    val bodyTextStyle = MaterialTheme.typography.bodyMedium.copy(
+        fontSize = Dimensions.scaledSp(Dimensions.bodyTextSize)
+    )
+    val buttonTextStyle = MaterialTheme.typography.labelLarge.copy(
+        fontSize = Dimensions.scaledSp(Dimensions.buttonTextSize)
+    )
+    val placeholderTextStyle = MaterialTheme.typography.bodyMedium.copy(
+        fontSize = Dimensions.scaledSp(Dimensions.bodyTextSize),
+        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+    )
 
     LaunchedEffect(Unit) {
         sharedViewModel.loadGoals(sharedPreferences)
@@ -164,7 +177,7 @@ fun Goals(sharedViewModel: SharedViewModel, navController: NavHostController) {
             if (currentGoal != null) {
                 Text(
                     text = "Last Updated: ${currentGoal.lastUpdated}",
-                    style = MaterialTheme.typography.bodySmall,
+                    style = bodyTextStyle,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.75f)
                 )
                 Spacer(modifier = Modifier.height(16.dp))
@@ -180,7 +193,7 @@ fun Goals(sharedViewModel: SharedViewModel, navController: NavHostController) {
                 Text(
                     text = "Current Weight",
                     modifier = Modifier.weight(1f),
-                    style = MaterialTheme.typography.bodyMedium
+                    style = bodyTextStyle
                 )
                 // Current weight input
                 BasicTextField(
@@ -205,17 +218,15 @@ fun Goals(sharedViewModel: SharedViewModel, navController: NavHostController) {
                             if (currentWeight.isEmpty()) {
                                 Text(
                                     "Enter current weight",
-                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                                    style = placeholderTextStyle
                                 )
                             }
                             innerTextField()
                         }
                     },
-                    textStyle = LocalTextStyle.current.copy(color = MaterialTheme.colorScheme.onSurface)
+                    textStyle = bodyTextStyle
                 )
             }
-
-            Spacer(modifier = Modifier.height(8.dp))
 
             // Weight goal
             Row(
@@ -227,7 +238,7 @@ fun Goals(sharedViewModel: SharedViewModel, navController: NavHostController) {
                 Text(
                     text = "Goal Weight",
                     modifier = Modifier.weight(1f),
-                    style = MaterialTheme.typography.bodyMedium
+                    style = bodyTextStyle
                 )
                 // Weight goal input
                 BasicTextField(
@@ -252,17 +263,15 @@ fun Goals(sharedViewModel: SharedViewModel, navController: NavHostController) {
                             if (weightGoal.isEmpty()) {
                                 Text(
                                     "Enter weight goal",
-                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                                    style = placeholderTextStyle
                                 )
                             }
                             innerTextField()
                         }
                     },
-                    textStyle = LocalTextStyle.current.copy(color = MaterialTheme.colorScheme.onSurface)
+                    textStyle = bodyTextStyle
                 )
             }
-
-            Spacer(modifier = Modifier.height(8.dp))
 
             // Activity level
             Row(
@@ -274,7 +283,7 @@ fun Goals(sharedViewModel: SharedViewModel, navController: NavHostController) {
                 Text(
                     text = "Activity Level",
                     modifier = Modifier.weight(1f),
-                    style = MaterialTheme.typography.bodyMedium
+                    style = bodyTextStyle
                 )
                 // Activity level input
                 val activityLevels =
@@ -289,7 +298,10 @@ fun Goals(sharedViewModel: SharedViewModel, navController: NavHostController) {
                         onClick = { expanded = true },
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text(activityLevel.ifEmpty { "Select activity level" })
+                        Text(
+                            activityLevel.ifEmpty { "Select activity level" },
+                            style = buttonTextStyle
+                        )
                     }
                     DropdownMenu(
                         expanded = expanded,
@@ -297,7 +309,7 @@ fun Goals(sharedViewModel: SharedViewModel, navController: NavHostController) {
                     ) {
                         activityLevels.forEach { level ->
                             DropdownMenuItem(
-                                text = { Text(level) },
+                                text = { Text(level, style = bodyTextStyle) },
                                 onClick = {
                                     activityLevel = level
                                     expanded = false
@@ -309,8 +321,6 @@ fun Goals(sharedViewModel: SharedViewModel, navController: NavHostController) {
                 }
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
-
             // Calorie goal
             Row(
                 modifier = Modifier
@@ -321,7 +331,7 @@ fun Goals(sharedViewModel: SharedViewModel, navController: NavHostController) {
                 Text(
                     text = "Calorie Goal",
                     modifier = Modifier.weight(1f),
-                    style = MaterialTheme.typography.bodyMedium
+                    style = bodyTextStyle
                 )
                 // Calorie goal input
                 BasicTextField(
@@ -344,17 +354,15 @@ fun Goals(sharedViewModel: SharedViewModel, navController: NavHostController) {
                             if (calorieGoal.isEmpty()) {
                                 Text(
                                     "Enter a daily calorie goal",
-                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                                    style = placeholderTextStyle
                                 )
                             }
                             innerTextField()
                         }
                     },
-                    textStyle = LocalTextStyle.current.copy(color = MaterialTheme.colorScheme.onSurface)
+                    textStyle = bodyTextStyle
                 )
             }
-
-            Spacer(modifier = Modifier.height(8.dp))
 
             Row(
                 modifier = Modifier
@@ -365,7 +373,7 @@ fun Goals(sharedViewModel: SharedViewModel, navController: NavHostController) {
                 Text(
                     text = "Calories Consumed",
                     modifier = Modifier.weight(1f),
-                    style = MaterialTheme.typography.bodyMedium
+                    style = bodyTextStyle
                 )
                 BasicTextField(
                     value = caloriesConsumed,
@@ -384,12 +392,13 @@ fun Goals(sharedViewModel: SharedViewModel, navController: NavHostController) {
                             if (caloriesConsumed.isEmpty()) {
                                 Text(
                                     "Enter calories consumed",
-                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                                    style = placeholderTextStyle
                                 )
                             }
                             innerTextField()
                         }
-                    }
+                    },
+                    textStyle = bodyTextStyle
                 )
                 Button(
                     onClick = {
@@ -406,11 +415,9 @@ fun Goals(sharedViewModel: SharedViewModel, navController: NavHostController) {
                         }
                     }
                 ) {
-                    Text("Save")
+                    Text("Save", style = buttonTextStyle)
                 }
             }
-
-            Spacer(modifier = Modifier.height(8.dp))
 
             if (showCaloriesLeft) {
                 val consumed = caloriesConsumed.toIntOrNull()
@@ -423,20 +430,18 @@ fun Goals(sharedViewModel: SharedViewModel, navController: NavHostController) {
                     ) {
                         Text(
                             text = "Calories Left: ${goal - consumed} cal",
-                            style = MaterialTheme.typography.bodyMedium,
+                            style = bodyTextStyle,
                             modifier = Modifier.padding(8.dp)
                         )
                     }
                 } else {
                     Text(
                         text = "Invalid input for calories",
-                        style = MaterialTheme.typography.bodyMedium,
+                        style = bodyTextStyle,
                         modifier = Modifier.padding(8.dp)
                     )
                 }
             }
-
-            Spacer(modifier = Modifier.height(8.dp))
 
             // Description
             Row(
@@ -448,7 +453,7 @@ fun Goals(sharedViewModel: SharedViewModel, navController: NavHostController) {
                 Text(
                     text = "Description",
                     modifier = Modifier.weight(1f),
-                    style = MaterialTheme.typography.bodyMedium
+                    style = bodyTextStyle
                 )
                 // Description input
                 BasicTextField(
@@ -470,17 +475,17 @@ fun Goals(sharedViewModel: SharedViewModel, navController: NavHostController) {
                             if (description.isEmpty()) {
                                 Text(
                                     "Enter a description (optional)",
-                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                                    style = placeholderTextStyle
                                 )
                             }
                             innerTextField()
                         }
                     },
-                    textStyle = LocalTextStyle.current.copy(color = MaterialTheme.colorScheme.onSurface)
+                    textStyle = bodyTextStyle
                 )
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(8.dp))
             WeightGraph(sharedViewModel.savedGoals, sharedViewModel)
         }
     }
