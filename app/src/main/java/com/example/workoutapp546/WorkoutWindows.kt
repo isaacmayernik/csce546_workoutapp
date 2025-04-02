@@ -50,6 +50,7 @@ import kotlinx.coroutines.launch
 import java.util.Calendar
 import kotlin.collections.component1
 import kotlin.collections.component2
+import kotlin.collections.flatten
 
 @Composable
 fun DatePickerDialog(
@@ -216,7 +217,7 @@ fun WorkoutDialog(
         filteredWorkouts
     } else {
         filteredWorkouts.filter { workout ->
-            workoutMuscleMap[workout]?.contains(selectedMuscleGroup) == true
+            workoutMuscleMap[workout]?.first?.contains(selectedMuscleGroup) == true
         }
     }
 
@@ -392,14 +393,19 @@ fun SortByDialog(
     onDismissRequest: () -> Unit,
     onMuscleGroupSelected: (String) -> Unit
 ) {
-    val muscleGroups = workoutMuscleMap.values.flatten().toSet().toList().sortedBy { originalName ->
-        when {
-            originalName == "back-lower" -> "lower back"
-            originalName == "deltoids-rear" -> "rear deltoids"
-            originalName.contains("chest-") -> "chest"
-            else -> originalName
+    val muscleGroups = workoutMuscleMap.values
+        .map { it.first }
+        .flatten()
+        .toSet()
+        .toList()
+        .sortedBy { originalName ->
+            when {
+                originalName == "back-lower" -> "lower back"
+                originalName == "deltoids-rear" -> "rear deltoids"
+                originalName.contains("chest-") -> "chest"
+                else -> originalName
+            }
         }
-    }
 
     Dialog(
         onDismissRequest = onDismissRequest

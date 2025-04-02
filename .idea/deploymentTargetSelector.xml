@@ -3,8 +3,8 @@
   <component name="deploymentTargetSelector">
     <selectionStates>
       <SelectionState runConfigName="app">
-        <option name="selectionMode" value="DIALOG" />
-        <DropdownSelection timestamp="2025-03-28T21:46:40.751884300Z">
+        <option name="selectionMode" value="DROPDOWN" />
+        <DropdownSelection timestamp="2025-04-02T02:55:06.928109400Z">
           <Target type="DEFAULT_BOOT">
             <handle>
               <DeviceId pluginId="LocalEmulator" identifier="path=C:\Users\isaac\.android\avd\Medium_Phone_API_35_2.avd" />
@@ -15,12 +15,12 @@
           <targets>
             <Target type="DEFAULT_BOOT">
               <handle>
-                <DeviceId pluginId="LocalEmulator" identifier="path=C:\Users\isaac\.android\avd\Medium_Phone_API_35_2.avd" />
+                <DeviceId pluginId="PhysicalDevice" identifier="serial=LGK4254ccdd2d3" />
               </handle>
             </Target>
             <Target type="DEFAULT_BOOT">
               <handle>
-                <DeviceId pluginId="LocalEmulator" identifier="path=C:\Users\isaac\.android\avd\Small_Phone.avd" />
+                <DeviceId pluginId="LocalEmulator" identifier="path=C:\Users\isaac\.android\avd\Medium_Phone_API_35_2.avd" />
               </handle>
             </Target>
           </targets>

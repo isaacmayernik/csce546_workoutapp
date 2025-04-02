@@ -62,6 +62,7 @@ import com.example.workoutapp546.workoutMuscleMap
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
+import kotlin.collections.flatten
 
 data class Workout(
     val name: String,
@@ -97,7 +98,7 @@ fun WorkoutLogApp(sharedViewModel: SharedViewModel) {
     val workouts = remember { mutableStateListOf<Workout>() }
     val muscleStates = remember {
         mutableStateMapOf<String, Color>().apply {
-            workoutMuscleMap.values.flatten().toSet().forEach { muscle ->
+            workoutMuscleMap.values.map { it.first}.flatten().toSet().forEach { muscle ->
                 this[muscle] = Color(0xFF18CB65)
             }
         }
@@ -131,7 +132,7 @@ fun WorkoutLogApp(sharedViewModel: SharedViewModel) {
         muscleStates.clear()
         muscleStates.putAll(savedMuscleStates)
 
-        workoutMuscleMap.values.flatten().toSet().forEach { muscle ->
+        workoutMuscleMap.values.map { it.first }.flatten().toSet().forEach { muscle ->
             if (!muscleStates.containsKey(muscle)) {
                 muscleStates[muscle] = Color(0xFF18CB65)
             }
@@ -163,7 +164,7 @@ fun WorkoutLogApp(sharedViewModel: SharedViewModel) {
 
     LaunchedEffect(animationState.isAnimating) {
         if (animationState.isAnimating) {
-            val affectedMuscles = workoutMuscleMap[selectedWorkout] ?: listOf()
+            val affectedMuscles = workoutMuscleMap[selectedWorkout]?.first ?: listOf()
 
             affectedMuscles.forEach { muscle ->
                 val currentColor = muscleStates[muscle] ?: Color(0xFF18CB65)
@@ -351,7 +352,7 @@ fun WorkoutLogApp(sharedViewModel: SharedViewModel) {
 
                 val muscleSets = mutableMapOf<String, Int>()
                 previousWorkouts.forEach { workout ->
-                    val muscles = workoutMuscleMap[workout.name] ?: listOf()
+                    val muscles = workoutMuscleMap[workout.name]?.first ?: listOf()
                     muscles.forEach { muscle ->
                         muscleSets[muscle] = (muscleSets[muscle] ?: 0) + workout.sets.size
                     }
@@ -460,7 +461,7 @@ fun WorkoutLogApp(sharedViewModel: SharedViewModel) {
                             workoutHistory[currentDate]?.clear()
                             workouts.clear()
                             muscleStates.clear()
-                            workoutMuscleMap.values.flatten().toSet().forEach { muscle ->
+                            workoutMuscleMap.values.map { it.first }.flatten().toSet().forEach { muscle ->
                                 muscleStates[muscle] = Color(0xFF18CB65)
                             }
                             saveMuscleState(sharedPreferences, currentDate, muscleStates)

@@ -5,8 +5,10 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -205,7 +207,8 @@ fun CreateRoutine(sharedViewModel: SharedViewModel, navController: NavHostContro
                     title = { Text("Workout Information") },
                     text = {
                         if (selectedWorkoutInfo.isNotEmpty()) {
-                            val muscleGroups = workoutMuscleMap[selectedWorkoutInfo]?.map {
+                            val workoutData = workoutMuscleMap[selectedWorkoutInfo]
+                            val muscleGroups = workoutData?.first?.map {
                                 when {
                                     it == "deltoids-rear" -> "rear deltoids"
                                     it == "back-lower" -> "lower back"
@@ -214,12 +217,27 @@ fun CreateRoutine(sharedViewModel: SharedViewModel, navController: NavHostContro
                                 }
                             }?.distinct()?.joinToString() ?: "N/A"
 
-                            Text("Selected workout: $selectedWorkoutInfo\n\n" +
-                                    "Affected muscles: $muscleGroups"
-                            )
+                            val tips = workoutData?.second?.takeIf { it.isNotEmpty() }
+                                ?.split(". ")
+                                ?.map { it.trim() }
+                                ?.filter { it.isNotEmpty() }
+                                ?.map { it.removeSuffix(".") }
+                                ?: listOf("No specified tips")
+
+                            Column {
+                                Text("Selected workout: $selectedWorkoutInfo\n")
+                                Text("Affected muscles: $muscleGroups\n")
+                                Text("\nTips:")
+                                Column(modifier = Modifier.padding(start = 8.dp)) {
+                                    tips.forEach { tip ->
+                                        Text(text = "• $tip")
+                                        Spacer(modifier = Modifier.height(4.dp))
+                                    }
+                                }
+                            }
                         } else {
                             Text("Click any workout to see detailed information about it " +
-                                    "including targeted muscle groups.")
+                                    "including targeted muscle groups and tips.")
                         }
                     },
                     confirmButton = {

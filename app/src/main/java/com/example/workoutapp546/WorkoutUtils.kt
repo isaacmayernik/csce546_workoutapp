@@ -15,7 +15,7 @@ fun saveWorkouts(sharedPreferences: SharedPreferences, date: String, workouts: L
     val muscleSets = mutableMapOf<String, Int>()
 
     workouts.forEach { workout ->
-        val muscles = workoutMuscleMap[workout.name] ?: listOf()
+        val muscles = workoutMuscleMap[workout.name]?.first ?: listOf()
         muscles.forEach { muscle ->
             muscleSets[muscle] = (muscleSets[muscle] ?: 0) + workout.sets.size
         }
