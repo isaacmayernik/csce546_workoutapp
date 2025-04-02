@@ -1,6 +1,7 @@
 package com.example.workoutapp546.notifications
 
 import android.content.Context
+import android.os.Build
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkInfo
@@ -21,6 +22,10 @@ object NotificationScheduler {
     }
 
     fun scheduleDailyNotification(context: Context) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            createNotificationChannel(context, "motivational_messages")
+        }
+
         val randomHour = (9..19).random()
         val randomMinute = (0..59).random()
 

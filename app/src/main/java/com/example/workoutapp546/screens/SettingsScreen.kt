@@ -2,6 +2,7 @@ package com.example.workoutapp546.screens
 
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import android.os.Build
 import android.provider.Settings
 import androidx.compose.foundation.layout.Column
@@ -68,9 +69,14 @@ fun Settings(sharedViewModel: SharedViewModel, navController: NavHostController)
     }
 
     fun openNotificationSettings() {
-        val intent = Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
-            putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+        val intent = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
+                putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+            }
+        } else {
+            Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                data = Uri.fromParts("package", context.packageName, null)
+            }
         }
         context.startActivity(intent)
     }
@@ -174,7 +180,7 @@ fun Settings(sharedViewModel: SharedViewModel, navController: NavHostController)
                 }
             }
 
-            // Next noti time - TESTING
+            // Next notification time for TESTING
             Row(
                 modifier = Modifier
                     .fillMaxWidth()

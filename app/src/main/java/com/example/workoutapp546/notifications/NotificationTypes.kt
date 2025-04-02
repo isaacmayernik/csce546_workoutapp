@@ -13,6 +13,19 @@ import com.example.workoutapp546.MainActivity
 import com.example.workoutapp546.R
 
 fun createNotification(context: Context, message: String) {
+    val channelId = "motivational_messages"
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O){
+        createNotificationChannel(context, channelId)
+    }
+
+    val notificationBuilder = NotificationCompat.Builder(context, channelId)
+        .setContentTitle("Workout Motivation")
+        .setContentText(message)
+        .setSmallIcon(R.drawable.ic_notification)
+        .setContentIntent(createPendingIntent(context))
+        .setPriority(NotificationCompat.PRIORITY_HIGH)
+        .setAutoCancel(true)
+
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
         if (ContextCompat.checkSelfPermission(
                 context,
@@ -22,17 +35,6 @@ fun createNotification(context: Context, message: String) {
             return
         }
     }
-
-    val channelId = "motivational_messages"
-    createNotificationChannel(context, channelId)
-
-    val notificationBuilder = NotificationCompat.Builder(context, channelId)
-        .setContentTitle("Workout Motivation")
-        .setContentText(message)
-        .setSmallIcon(R.drawable.ic_notification)
-        .setContentIntent(createPendingIntent(context))
-        .setPriority(NotificationCompat.PRIORITY_HIGH)
-        .setAutoCancel(true)
 
     with(NotificationManagerCompat.from(context)) {
         notify(System.currentTimeMillis().toInt(), notificationBuilder.build())
@@ -53,7 +55,7 @@ private fun createPendingIntent(context: Context): PendingIntent {
     )
 }
 
-private fun createNotificationChannel(
+fun createNotificationChannel(
     context: Context,
     channelId: String
 ) {
