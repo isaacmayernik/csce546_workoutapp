@@ -46,6 +46,7 @@ dependencies {
     implementation(libs.androidx.vectordrawable)
     implementation(libs.androidx.material3)
     implementation(libs.mpandroidchart)
+    implementation(libs.androidx.work.runtime.ktx)
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)

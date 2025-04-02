@@ -1,12 +1,16 @@
 package com.example.workoutapp546
 
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import androidx.annotation.RequiresApi
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Home
@@ -26,12 +30,15 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.example.workoutapp546.notifications.RequestNotificationPermissions
 import com.example.workoutapp546.screens.CreateRoutine
 import com.example.workoutapp546.screens.Goals
 import com.example.workoutapp546.screens.Settings
@@ -41,6 +48,7 @@ import com.example.workoutapp546.ui.theme.WorkoutApp546Theme
 class MainActivity : ComponentActivity() {
     private val sharedViewModel : SharedViewModel by viewModels()
 
+    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -54,6 +62,7 @@ class MainActivity : ComponentActivity() {
                 sharedViewModel = sharedViewModel,
             ) {
                 Surface {
+                    RequestNotificationPermissions()
                     NavigationApp(sharedViewModel)
                 }
             }
@@ -100,7 +109,9 @@ fun BottomBarNavigation(
         targetRoute = null
     }
 
-    NavigationBar {
+    NavigationBar(
+        modifier = Modifier.height(80.dp)
+    ) {
         items.forEach { screen ->
             NavigationBarItem(
                 selected = currentRoute == screen.route,
@@ -122,8 +133,19 @@ fun BottomBarNavigation(
                         }
                     }
                 },
-                icon = { Icon(screen.icon, contentDescription = screen.title) },
-                label = { Text(screen.title) }
+                icon = {
+                    Icon(
+                        screen.icon,
+                        contentDescription = screen.title,
+                        modifier = Modifier.size(20.dp)
+                    )
+                },
+                label = {
+                    Text(
+                        screen.title,
+                        fontSize = 12.sp
+                    )
+                }
             )
         }
     }
