@@ -110,7 +110,7 @@ fun BottomBarNavigation(
     }
 
     NavigationBar(
-        modifier = Modifier.height(80.dp)
+        modifier = Modifier.height(90.dp)
     ) {
         items.forEach { screen ->
             NavigationBarItem(
@@ -137,13 +137,13 @@ fun BottomBarNavigation(
                     Icon(
                         screen.icon,
                         contentDescription = screen.title,
-                        modifier = Modifier.size(20.dp)
+                        modifier = Modifier.size(16.dp)
                     )
                 },
                 label = {
                     Text(
                         screen.title,
-                        fontSize = 12.sp
+                        fontSize = 8.sp
                     )
                 }
             )

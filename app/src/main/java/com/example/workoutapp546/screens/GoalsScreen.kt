@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
@@ -282,7 +283,7 @@ fun Goals(sharedViewModel: SharedViewModel, navController: NavHostController) {
             ) {
                 Text(
                     text = "Activity Level",
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.weight(0.4f),
                     style = bodyTextStyle
                 )
                 // Activity level input
@@ -291,16 +292,20 @@ fun Goals(sharedViewModel: SharedViewModel, navController: NavHostController) {
                 var expanded by remember { mutableStateOf(false) }
                 Box(
                     modifier = Modifier
-                        .weight(1f)
+                        .weight(0.6f)
                         .padding(8.dp)
                 ) {
                     Button(
                         onClick = { expanded = true },
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(Dimensions.scaledDp(Dimensions.buttonHeight))
+                            .padding(Dimensions.scaledDp(Dimensions.buttonPadding))
                     ) {
                         Text(
                             activityLevel.ifEmpty { "Select activity level" },
-                            style = buttonTextStyle
+                            style = buttonTextStyle,
+                            modifier = Modifier.wrapContentSize(Alignment.Center)
                         )
                     }
                     DropdownMenu(
@@ -413,9 +418,17 @@ fun Goals(sharedViewModel: SharedViewModel, navController: NavHostController) {
                                 snackbarHostState.showSnackbar("Please enter valid numbers for calories consumed and goal.")
                             }
                         }
-                    }
+                    },
+                    modifier = Modifier
+                        .height(Dimensions.scaledDp(Dimensions.buttonHeight))
+                        .width(Dimensions.scaledDp(Dimensions.buttonWidth))
+                        .padding(Dimensions.scaledDp(Dimensions.buttonPadding))
                 ) {
-                    Text("Save", style = buttonTextStyle)
+                    Text(
+                        "Save",
+                        style = buttonTextStyle,
+                        modifier = Modifier.wrapContentSize(Alignment.Center)
+                    )
                 }
             }
 
@@ -549,7 +562,7 @@ fun WeightGraph(goals: List<Goal>, sharedViewModel: SharedViewModel) {
                 .height(200.dp)
         )
     } else {
-        Text("No valid data to display", modifier = Modifier.padding(16.dp))
+        Text("No valid data to display", modifier = Modifier.padding(16.dp), fontSize = Dimensions.scaledSp(Dimensions.bodyTextSize))
     }
 }
 
