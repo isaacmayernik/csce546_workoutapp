@@ -11,6 +11,7 @@ import com.google.gson.reflect.TypeToken
 import androidx.core.content.edit
 import com.example.workoutapp546.screens.Goal
 import com.example.workoutapp546.screens.Routine
+import com.example.workoutapp546.screens.Workout
 
 class SharedViewModel : ViewModel() {
     var savedGoals by mutableStateOf<List<Goal>>(emptyList())
@@ -21,6 +22,36 @@ class SharedViewModel : ViewModel() {
 
     var savedRoutines by mutableStateOf<List<Routine>>(emptyList())
         private set
+
+    private var _personalRecords = mutableStateMapOf<String, Int>()
+    val personalRecords: Map<String, Int> get() = _personalRecords
+
+    fun checkNewPR(workout: Workout): Boolean {
+        val currentPR = _personalRecords[workout.name] ?: 0
+        val newValue = workout.maxReps * (workout.weight ?: 1f)
+
+        if (newValue > currentPR) {
+            _personalRecords[workout.name] = newValue.toInt()
+            return true
+        }
+        return false
+    }
+
+    fun savePR(sharedPreferences: SharedPreferences) {
+        val gson = Gson()
+        val json = gson.toJson(_personalRecords)
+        sharedPreferences.edit { putString("personal_records", json) }
+    }
+
+    fun loadPR(sharedPreferences: SharedPreferences) {
+        val gson = Gson()
+        val json = sharedPreferences.getString("personal_records", null)
+        if (json != null) {
+            val type = object : TypeToken<Map<String, Int>>() {}.type
+            _personalRecords.clear()
+            _personalRecords.putAll(gson.fromJson(json, type))
+        }
+    }
 
     var routineJustCreated by mutableStateOf(false)
         private set

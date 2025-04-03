@@ -6,6 +6,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import coil.compose.AsyncImage
+import com.example.workoutapp546.screens.Workout
 import kotlin.collections.component1
 import kotlin.collections.component2
 import kotlin.collections.forEach
@@ -89,5 +90,24 @@ fun MuscleGroupsView(
                 colorFilter = ColorFilter.tint(animationState.currentColor)
             )
         }
+    }
+}
+
+fun updateMuscleStatesAfterDeletion(workout: Workout, muscleStates: MutableMap<String, Color>) {
+    val muscles = workoutMuscleMap[workout.name]?.first ?: return
+    muscles.forEach { muscle ->
+        val currentColor = muscleStates[muscle] ?: Color(0xFF18CB65)
+        val currentSets = when (currentColor) {
+            Color(0xFF18CB65) -> 0
+            Color(0xFFA8E02A) -> 1
+            Color(0xFFFFFF2D) -> 2
+            Color(0xFFFFD21F) -> 3
+            Color(0xFFFFB30A) -> 4
+            Color(0xFFCE3135) -> 5
+            else -> 0
+        }
+
+        val newSets = maxOf(0, currentSets - workout.sets.size)
+        muscleStates[muscle] = getMuscleColor(newSets)
     }
 }

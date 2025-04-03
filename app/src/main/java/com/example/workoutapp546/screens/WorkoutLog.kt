@@ -14,10 +14,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -42,6 +45,7 @@ import coil.compose.AsyncImage
 import com.google.gson.Gson
 import kotlinx.coroutines.launch
 import androidx.core.content.edit
+import androidx.navigation.NavHostController
 import com.example.workoutapp546.AnimationState
 import com.example.workoutapp546.DatePickerDialog
 import com.example.workoutapp546.MuscleGroupsView
@@ -66,11 +70,15 @@ import kotlin.collections.flatten
 
 data class Workout(
     val name: String,
-    val sets: List<WorkoutSet>
-)
+    val sets: List<WorkoutSet>,
+    val weight: Float? = null
+) {
+    val maxReps: Int get() = sets.maxOfOrNull { it.reps } ?: 0
+}
 
 data class WorkoutSet(
-    val reps: Int
+    val reps: Int,
+    val weight: Float? = null
 )
 
 data class Routine(
@@ -85,7 +93,7 @@ data class RoutineWorkout(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun WorkoutLogApp(sharedViewModel: SharedViewModel) {
+fun WorkoutLogApp(sharedViewModel: SharedViewModel, navController: NavHostController) {
     val context = LocalContext.current
     val sharedPreferences =
         remember { context.getSharedPreferences("WorkoutApp", Context.MODE_PRIVATE) }
@@ -199,36 +207,62 @@ fun WorkoutLogApp(sharedViewModel: SharedViewModel) {
 
     Scaffold(
         topBar = {
-            // Date navigation
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(vertical = 8.dp),
-                horizontalArrangement = Arrangement.Center
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Button(onClick = { currentDate = getPreviousDate(currentDate) }) {
-                    Text("<")
-                }
-                Spacer(modifier = Modifier.width(8.dp))
-                Button(
-                    onClick = { showDatePicker = true },
-                    modifier = Modifier.fillMaxWidth(0.45f)
+                Spacer(modifier = Modifier.width(48.dp))
+
+                // Date navigation
+                Row(
+                    modifier = Modifier.weight(1f),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center
+                    Button(onClick = { currentDate = getPreviousDate(currentDate) }) {
+                        Text("<")
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Button(
+                        onClick = { showDatePicker = true },
+                        modifier = Modifier.width(150.dp)
                     ) {
-                        Text(currentDate)
-                        Icon(
-                            imageVector = Icons.Default.ArrowDropDown,
-                            contentDescription = "Dropdown"
-                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            Text(currentDate)
+                            Icon(
+                                imageVector = Icons.Default.ArrowDropDown,
+                                contentDescription = "Dropdown"
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Button(onClick = { currentDate = getNextDate(currentDate) }) {
+                        Text(">")
                     }
                 }
-                Spacer(modifier = Modifier.width(8.dp))
-                Button(onClick = { currentDate = getNextDate(currentDate) }) {
-                    Text(">")
+
+                IconButton(
+                    onClick = {
+                        if (workouts.isNotEmpty() || workoutHistory[currentDate]?.isNotEmpty() == true) {
+                            navController.navigate("history")
+                        }
+                    },
+                    enabled = workouts.isNotEmpty() || workoutHistory[currentDate]?.isNotEmpty() == true,
+                    modifier = Modifier.padding(end = 8.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Info,
+                        contentDescription = "Workout History",
+                        tint = if (workouts.isNotEmpty() || workoutHistory[currentDate]?.isNotEmpty() == true)
+                            MaterialTheme.colorScheme.primary
+                        else
+                            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
+                    )
                 }
             }
         },
@@ -294,10 +328,14 @@ fun WorkoutLogApp(sharedViewModel: SharedViewModel) {
                                 workoutHistory.getOrPut(currentDate) { mutableStateListOf() }
                             historyForDate.add(Pair(muscleStates.toMap(), workouts.toList()))
 
+                            val newWorkout = Workout(selectedWorkout, List(selectedSets) { WorkoutSet(0) })
+                            workouts.add(newWorkout)
+
                             targetSets = selectedSets
                             targetSets = selectedSets
                             animationState = animationState.copy(isAnimating = true)
 
+                            saveWorkouts(sharedPreferences, currentDate, workouts)
                             saveMuscleState(sharedPreferences, currentDate, muscleStates)
                             sharedViewModel.setHasChanges(currentDate, true, sharedPreferences)
                             hasChanges.value = true

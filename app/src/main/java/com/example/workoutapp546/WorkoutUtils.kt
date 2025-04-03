@@ -12,20 +12,16 @@ import java.util.Locale
 import kotlin.collections.forEach
 
 fun saveWorkouts(sharedPreferences: SharedPreferences, date: String, workouts: List<Workout>) {
-    val muscleSets = mutableMapOf<String, Int>()
+    val gson = Gson()
+    sharedPreferences.edit { putString(date, gson.toJson(workouts)) }
 
+    val muscleSets = mutableMapOf<String, Int>()
     workouts.forEach { workout ->
-        val muscles = workoutMuscleMap[workout.name]?.first ?: listOf()
-        muscles.forEach { muscle ->
+        workoutMuscleMap[workout.name]?.first?.forEach { muscle ->
             muscleSets[muscle] = (muscleSets[muscle] ?: 0) + workout.sets.size
         }
     }
-
-    val gson = Gson()
-    sharedPreferences.edit {
-        putString(date, gson.toJson(workouts))
-        putString("${date}_muscle_sets", gson.toJson(muscleSets))
-    }
+    sharedPreferences.edit { putString("${date}_muscle_sets", gson.toJson(muscleSets)) }
 }
 
 fun loadWorkouts(sharedPreferences: SharedPreferences, date: String): Triple<List<Workout>, Map<String, Int>, Boolean> {
