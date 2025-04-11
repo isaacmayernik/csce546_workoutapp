@@ -1,5 +1,6 @@
 package com.example.workoutapp546.screens
 
+import android.content.SharedPreferences
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -12,6 +13,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
@@ -21,7 +23,6 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -35,24 +36,82 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontVariation.weight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import com.example.workoutapp546.SharedViewModel
-
+import com.example.workoutapp546.loadMuscleState
+import com.example.workoutapp546.loadWorkouts
+import com.example.workoutapp546.saveMuscleState
+import com.example.workoutapp546.saveWorkouts
+import com.example.workoutapp546.updateMuscleStatesAfterDeletion
 
 @Composable
 fun WorkoutHistory(
     sharedViewModel: SharedViewModel,
     navController: NavHostController,
-    workouts: List<Workout>,
-    onDeleteWorkout: (Workout) -> Unit,
-    onUpdateReps: (Workout, List<WorkoutSet>) -> Unit,
+    date: String,
+    sharedPreferences: SharedPreferences
 ) {
+    var workouts by remember { mutableStateOf(loadWorkouts(sharedPreferences, date).first) }
+    val groupedWorkouts = remember(workouts) {
+        workouts.groupBy { it.name }.map { (name, workouts) ->
+            val allSets = workouts.flatMap { it.sets }
+            val pr = sharedViewModel.personalRecords[name]
+            val isNewPR = pr?.let { prRecord ->
+                allSets.any { set ->
+                    set.weight?.let { weight ->
+                        (set.reps * weight) >= (prRecord.reps * prRecord.weight)
+                    } ?: false
+                }
+            } ?: false
+
+            GroupedWorkout(
+                name = name,
+                sets = allSets,
+                isNewPR = isNewPR,
+                prRecord = pr?.let {
+                    "${it.reps} reps @ ${if (it.weight.rem(1) == 0f) it.weight.toInt() else it.weight}lbs"
+                }
+            )
+        }
+    }
+
     var showDeleteConfirmation by remember { mutableStateOf(false) }
-    var workoutToDelete by remember { mutableStateOf<Workout?>(null) }
     var showRepsDialog by remember { mutableStateOf(false) }
-    var workoutToUpdate by remember { mutableStateOf<Workout?>(null) }
+    var workoutToDelete by remember { mutableStateOf<String?>(null) }
+    var workoutToUpdate by remember { mutableStateOf<String?>(null) }
+
+    fun handleDeleteWorkout(name: String) {
+        val updatedWorkouts = workouts.filterNot { it.name == name }.toMutableList()
+        saveWorkouts(sharedPreferences, date, updatedWorkouts)
+        workouts = updatedWorkouts
+
+        val muscleStates = loadMuscleState(sharedPreferences, date)
+        workouts.firstOrNull { it.name == name }?.let { workout ->
+            updateMuscleStatesAfterDeletion(workout, muscleStates)
+        }
+        saveMuscleState(sharedPreferences, date, muscleStates)
+    }
+
+    fun handleUpdateReps(name: String, sets: List<WorkoutSet>) {
+        val updatedWorkouts = workouts.filterNot { it.name == name }.toMutableList()
+
+        sets.forEach { set ->
+            if (set.reps > 0) { // Only add if reps are greater than 0
+                updatedWorkouts.add(Workout(name = name, sets = listOf(set)))
+            }
+        }
+
+        saveWorkouts(sharedPreferences, date, updatedWorkouts)
+        workouts = updatedWorkouts
+
+        updatedWorkouts.filter { it.name == name }.forEach { workout ->
+            if (sharedViewModel.checkNewPR(workout)) {
+                sharedViewModel.savePR(sharedPreferences)
+            }
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -90,15 +149,7 @@ fun WorkoutHistory(
                 LazyColumn(
                     modifier = Modifier.fillMaxSize()
                 ) {
-                    items(workouts) { workout ->
-                        val isNewPR by remember(workout) {
-                            mutableStateOf(
-                                sharedViewModel.personalRecords[workout.name]?.let { pr ->
-                                    (workout.maxReps * (workout.weight ?: 1f)).toInt() >= pr
-                                } == true
-                            )
-                        }
-
+                    items(groupedWorkouts) { groupedWorkout ->
                         Card(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -109,22 +160,35 @@ fun WorkoutHistory(
                                     modifier = Modifier.fillMaxWidth(),
                                     horizontalArrangement = Arrangement.SpaceBetween
                                 ) {
-                                    Text(workout.name, style = MaterialTheme.typography.titleMedium)
-                                    if (isNewPR) {
-                                        Text("New PR!", color = Color.Green, style = MaterialTheme.typography.labelLarge)
+                                    Text(groupedWorkout.name, style = MaterialTheme.typography.titleMedium)
+                                    if (groupedWorkout.isNewPR) {
+                                        sharedViewModel.personalRecords[groupedWorkout.name]?.let { pr ->
+                                            Column(horizontalAlignment = Alignment.End) {
+                                                Text("New PR!", color = Color.Green,
+                                                    style = MaterialTheme.typography.labelLarge)
+                                                groupedWorkout.prRecord?.let {
+                                                    Text(it, style = MaterialTheme.typography.bodySmall)
+                                                }
+                                            }
+                                        }
                                     }
                                 }
 
                                 Spacer(modifier = Modifier.height(8.dp))
 
-                                workout.sets.forEachIndexed { index, set ->
+                                groupedWorkout.sets.forEachIndexed { index, set ->
                                     if (index == 0 || set.reps > 0) {
                                         Row(verticalAlignment = Alignment.CenterVertically) {
                                             Text("Set ${index + 1}: ${set.reps} reps")
                                             Spacer(modifier = Modifier.width(4.dp))
 
                                             set.weight?.let { weight ->
-                                                Text(" @ ${weight}kg", style = MaterialTheme.typography.bodySmall)
+                                                val weightText = if (weight.rem(1) == 0f) {
+                                                    weight.toInt().toString()
+                                                } else {
+                                                    weight.toString()
+                                                }
+                                                Text(" @ ${weightText}lbs", style = MaterialTheme.typography.bodySmall)
                                             }
                                         }
                                     }
@@ -138,14 +202,14 @@ fun WorkoutHistory(
                                 ) {
                                     Button(
                                         onClick = {
-                                            workoutToUpdate = workout
+                                            workoutToUpdate = groupedWorkout.name
                                             showRepsDialog = true
                                         }
                                     ) { Text("Edit Reps") }
 
                                     Button(
                                         onClick = {
-                                            workoutToDelete = workout
+                                            workoutToDelete = groupedWorkout.name
                                             showDeleteConfirmation = true
                                         },
                                         colors = ButtonDefaults.buttonColors(containerColor = Color.Red)
@@ -163,11 +227,11 @@ fun WorkoutHistory(
         AlertDialog(
             onDismissRequest = { showDeleteConfirmation = false },
             title = { Text("Delete Workout") },
-            text = { Text("Are you sure you want to delete this workout?") },
+            text = { Text("Are you sure you want to delete all sets of $workoutToDelete?") },
             confirmButton = {
                 Button(
                     onClick = {
-                        workoutToDelete?.let { onDeleteWorkout(it) }
+                        workoutToDelete?.let { handleDeleteWorkout(it) }
                         showDeleteConfirmation = false
                     }
                 ) {
@@ -185,39 +249,53 @@ fun WorkoutHistory(
     }
 
     if (showRepsDialog && workoutToUpdate != null) {
-        val setsList = remember {
+        val exerciseSets = remember {
             mutableStateListOf<WorkoutSet>().apply {
-                add(workoutToUpdate!!.sets.firstOrNull() ?: WorkoutSet(0))
+                addAll(workouts.filter { it.name == workoutToUpdate }.flatMap { it.sets })
             }
         }
 
         AlertDialog(
             onDismissRequest = { showRepsDialog = false },
-            title = { Text(
-                "Edit reps for ${workoutToUpdate!!.name}",
-                style = MaterialTheme.typography.titleMedium
-            ) },
+            title = { Text("Edit sets for $workoutToUpdate") },
             text = {
                 Column {
-                    setsList.forEachIndexed { index, set ->
+                    exerciseSets.forEachIndexed { index, set ->
+                        var repsText by remember { mutableStateOf(set.reps.toString()) }
+                        var weightText by remember {
+                            mutableStateOf(
+                                if(set.weight?.rem(1) == 0.0f)
+                                    set.weight.toInt().toString()
+                                else
+                                    set.weight?.toString() ?: ""
+                            )
+                        }
+
+
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.padding(vertical = 4.dp)
+                            modifier = Modifier
+                                .padding(vertical = 4.dp)
+                                .height(56.dp)
                         ) {
-                            Text("Set ${index + 1}: ", modifier = Modifier.width(60.dp))
+                            Text("Set ${index + 1}: ", modifier = Modifier.width(50.dp))
 
                             // Reps input
                             OutlinedTextField(
-                                value = if (set.reps == 0) "# of reps" else set.reps.toString(),
+                                value = repsText,
                                 onValueChange = { newValue ->
-                                    if (newValue.toIntOrNull() != null) {
-                                        setsList[index] = set.copy(reps = newValue.toInt())
+                                    if (newValue.isEmpty()) {
+                                        repsText = ""
+                                        exerciseSets[index] = set.copy(reps = 0)
+                                    } else if (newValue.all { it.isDigit() }) {
+                                        repsText = newValue
+                                        exerciseSets[index] = set.copy(reps = newValue.toInt())
                                     }
                                 },
-                                modifier = Modifier.width(90.dp),
-                                textStyle = LocalTextStyle.current.copy(
-                                    color = if (set.reps == 0) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
-                                    else MaterialTheme.colorScheme.onSurface
+                                label = { Text("Reps") },
+                                modifier = Modifier.width(86.dp),
+                                keyboardOptions = KeyboardOptions.Default.copy(
+                                    keyboardType = KeyboardType.Number
                                 ),
                                 singleLine = true
                             )
@@ -226,24 +304,29 @@ fun WorkoutHistory(
 
                             // Weight input
                             OutlinedTextField(
-                                value = set.weight?.toString() ?: "",
+                                value = weightText,
                                 onValueChange = { newValue ->
-                                    setsList[index] = set.copy(
-                                        weight = newValue.toFloatOrNull()
-                                    )
+                                    if (newValue.isEmpty()) {
+                                        weightText = ""
+                                        exerciseSets[index] = set.copy(weight = null)
+                                    } else if (newValue.matches(Regex("^\\d*\\.?\\d*\$"))) {
+                                        weightText = newValue
+                                        exerciseSets[index] = set.copy(
+                                            weight = newValue.toFloatOrNull()
+                                        )
+                                    }
                                 },
                                 label = { Text("Weight") },
-                                modifier = Modifier.width(90.dp),
-                                textStyle = LocalTextStyle.current.copy(
-                                    color = if (set.weight == null) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
-                                    else MaterialTheme.colorScheme.onSurface
+                                modifier = Modifier.width(86.dp),
+                                keyboardOptions = KeyboardOptions.Default.copy(
+                                    keyboardType = KeyboardType.Number
                                 ),
                                 singleLine = true
                             )
 
                             IconButton(
-                                onClick = { setsList.removeAt(index) },
-                                enabled = setsList.size > 1
+                                onClick = { exerciseSets.removeAt(index) },
+                                enabled = exerciseSets.size > 1
                             ) {
                                 Icon(Icons.Default.Delete, contentDescription = "Remove set")
                             }
@@ -252,16 +335,16 @@ fun WorkoutHistory(
 
                     Button(
                         onClick = {
-                            if (setsList.size < workoutToUpdate!!.sets.size) {
-                                setsList.add(
+                            if (exerciseSets.size < workouts.filter { it.name == workoutToUpdate }.flatMap { it.sets }.size) {
+                                exerciseSets.add(
                                     WorkoutSet(
-                                        reps = setsList.lastOrNull()?.reps ?: 0,
-                                        weight = setsList.lastOrNull()?.weight
+                                        reps = exerciseSets.lastOrNull()?.reps ?: 0,
+                                        weight = exerciseSets.lastOrNull()?.weight
                                     )
                                 )
                             }
                         },
-                        enabled = setsList.size < workoutToUpdate!!.sets.size,
+                        enabled = exerciseSets.size < workouts.filter { it.name == workoutToUpdate }.flatMap { it.sets }.size,
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Text("Add Set")
@@ -271,19 +354,8 @@ fun WorkoutHistory(
             confirmButton = {
                 Button(
                     onClick = {
-                        // Fill remaining sets with last entered values when saving
-                        val filledSets = setsList.toMutableList().apply {
-                            while (size < workoutToUpdate!!.sets.size) {
-                                add(
-                                    WorkoutSet(
-                                        reps = lastOrNull()?.reps ?: 0,
-                                        weight = lastOrNull()?.weight
-                                    )
-                                )
-                            }
-                        }
-                        workoutToUpdate?.let { workout ->
-                            onUpdateReps(workout, filledSets)
+                        workoutToUpdate?.let { name ->
+                            handleUpdateReps(name, exerciseSets.filter { it.reps > 0 })
                         }
                         showRepsDialog = false
                     }

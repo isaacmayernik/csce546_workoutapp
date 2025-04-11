@@ -41,11 +41,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import coil.compose.AsyncImage
-import com.google.gson.Gson
-import kotlinx.coroutines.launch
 import androidx.core.content.edit
 import androidx.navigation.NavHostController
+import coil.compose.AsyncImage
 import com.example.workoutapp546.AnimationState
 import com.example.workoutapp546.DatePickerDialog
 import com.example.workoutapp546.MuscleGroupsView
@@ -63,10 +61,18 @@ import com.example.workoutapp546.loadWorkouts
 import com.example.workoutapp546.saveMuscleState
 import com.example.workoutapp546.saveWorkouts
 import com.example.workoutapp546.workoutMuscleMap
+import com.google.gson.Gson
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import kotlin.collections.flatten
+
+data class GroupedWorkout(
+    val name: String,
+    val sets: List<WorkoutSet>,
+    val isNewPR: Boolean,
+    val prRecord: String?
+)
 
 data class Workout(
     val name: String,
@@ -249,7 +255,7 @@ fun WorkoutLogApp(sharedViewModel: SharedViewModel, navController: NavHostContro
                 IconButton(
                     onClick = {
                         if (workouts.isNotEmpty() || workoutHistory[currentDate]?.isNotEmpty() == true) {
-                            navController.navigate("history")
+                            navController.navigate("history/${currentDate}")
                         }
                     },
                     enabled = workouts.isNotEmpty() || workoutHistory[currentDate]?.isNotEmpty() == true,

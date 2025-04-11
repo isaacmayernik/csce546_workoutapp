@@ -26,13 +26,10 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -46,7 +43,6 @@ import com.example.workoutapp546.notifications.RequestNotificationPermissions
 import com.example.workoutapp546.screens.CreateRoutine
 import com.example.workoutapp546.screens.Goals
 import com.example.workoutapp546.screens.Settings
-import com.example.workoutapp546.screens.Workout
 import com.example.workoutapp546.screens.WorkoutHistory
 import com.example.workoutapp546.screens.WorkoutLogApp
 import com.example.workoutapp546.ui.theme.WorkoutApp546Theme
@@ -199,50 +195,16 @@ fun NavigationGraph(navController: NavHostController, modifier: Modifier = Modif
         composable(Screen.Goals.route) { GoalsScreen(navController, sharedViewModel) }
         composable(Screen.Settings.route) { SettingsScreen(navController, sharedViewModel) }
         composable("create_routine") { CreateRoutine(sharedViewModel, navController) }
-        composable("history") {
+        composable("history/{date}") { backStackEntry ->
+            val date = backStackEntry.arguments?.getString("date") ?: getCurrentDate()
             val context = LocalContext.current
             val sharedPreferences = remember { context.getSharedPreferences("WorkoutApp", Context.MODE_PRIVATE) }
-            val currentDate = remember { getCurrentDate() }
-            var workouts by remember {
-                mutableStateOf(loadWorkouts(sharedPreferences, currentDate).first)
-            }
-            val workoutHistory = remember { mutableStateMapOf<String, MutableList<Pair<Map<String, Color>, List<Workout>>>>() }
-
-            if (workoutHistory[currentDate] == null) {
-                workoutHistory[currentDate] = remember { mutableStateListOf(
-                    Pair(
-                        loadMuscleState(sharedPreferences, currentDate),
-                        workouts
-                    )
-                ) }
-            }
 
             WorkoutHistory(
                 sharedViewModel = sharedViewModel,
                 navController = navController,
-                workouts = workoutHistory[currentDate]?.lastOrNull()?.second ?: emptyList(),
-                onDeleteWorkout = { workout ->
-                    val updatedWorkouts = workouts.toMutableList().apply { remove(workout) }
-                    saveWorkouts(sharedPreferences, currentDate, updatedWorkouts)
-                    val muscleStates = loadMuscleState(sharedPreferences, currentDate)
-                    updateMuscleStatesAfterDeletion(workout, muscleStates)
-                    saveMuscleState(sharedPreferences, currentDate, muscleStates)
-
-                    workoutHistory[currentDate]?.add(Pair(muscleStates, updatedWorkouts))
-                },
-                onUpdateReps = { workout, sets ->
-                    val updatedWorkout = workout.copy(sets = sets)
-                    val updated = workouts.toMutableList().apply {
-                        val index = indexOf(workout)
-                        if (index != -1) set(index, updatedWorkout)
-                    }
-                    saveWorkouts(sharedPreferences, currentDate, updated)
-                    workouts = updated
-
-                    if (sharedViewModel.checkNewPR(updatedWorkout)) {
-                        sharedViewModel.savePR(sharedPreferences)
-                    }
-                }
+                date = date,
+                sharedPreferences = sharedPreferences
             )
         }
     }

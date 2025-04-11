@@ -5,13 +5,15 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.lifecycle.ViewModel
-import com.google.gson.Gson
-import com.google.gson.reflect.TypeToken
 import androidx.core.content.edit
+import androidx.lifecycle.ViewModel
 import com.example.workoutapp546.screens.Goal
 import com.example.workoutapp546.screens.Routine
 import com.example.workoutapp546.screens.Workout
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
+
+data class PersonalRecord(val reps: Int, val weight: Float)
 
 class SharedViewModel : ViewModel() {
     var savedGoals by mutableStateOf<List<Goal>>(emptyList())
@@ -23,16 +25,22 @@ class SharedViewModel : ViewModel() {
     var savedRoutines by mutableStateOf<List<Routine>>(emptyList())
         private set
 
-    private var _personalRecords = mutableStateMapOf<String, Int>()
-    val personalRecords: Map<String, Int> get() = _personalRecords
+    private var _personalRecords = mutableStateMapOf<String, PersonalRecord>()
+    val personalRecords: Map<String, PersonalRecord> get() = _personalRecords
 
     fun checkNewPR(workout: Workout): Boolean {
-        val currentPR = _personalRecords[workout.name] ?: 0
-        val newValue = workout.maxReps * (workout.weight ?: 1f)
+        val currentPR = _personalRecords[workout.name]
 
-        if (newValue > currentPR) {
-            _personalRecords[workout.name] = newValue.toInt()
-            return true
+        val bestSet = workout.sets.maxByOrNull { set ->
+            set.reps * (set.weight ?: 0f)
+        } ?: return false
+
+        bestSet.weight?.let { weight ->
+            if (currentPR == null ||
+                (bestSet.reps * weight) > (currentPR.reps * currentPR.weight)) {
+                _personalRecords[workout.name] = PersonalRecord(bestSet.reps, weight)
+                return true
+            }
         }
         return false
     }
@@ -47,9 +55,19 @@ class SharedViewModel : ViewModel() {
         val gson = Gson()
         val json = sharedPreferences.getString("personal_records", null)
         if (json != null) {
-            val type = object : TypeToken<Map<String, Int>>() {}.type
-            _personalRecords.clear()
-            _personalRecords.putAll(gson.fromJson(json, type))
+            try {
+                val newType = object : TypeToken<Map<String, PersonalRecord>>() {}.type
+                _personalRecords.clear()
+                _personalRecords.putAll(gson.fromJson(json, newType))
+            } catch (e: Exception) {
+                // fix old formatted ones
+                val oldType = object : TypeToken<Map<String, Int>>() {}.type
+                val oldRecords: Map<String, Int> = gson.fromJson(json, oldType)
+                oldRecords.forEach { (name, volume) ->
+                    _personalRecords[name] = PersonalRecord(1, volume.toFloat())
+                }
+                savePR(sharedPreferences)
+            }
         }
     }
 
