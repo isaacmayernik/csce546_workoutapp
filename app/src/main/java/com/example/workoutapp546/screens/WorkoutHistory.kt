@@ -83,12 +83,13 @@ fun WorkoutHistory(
     var workoutToUpdate by remember { mutableStateOf<String?>(null) }
 
     fun handleDeleteWorkout(name: String) {
+        val workoutsToDelete = workouts.filter { it.name == name }
         val updatedWorkouts = workouts.filterNot { it.name == name }.toMutableList()
         saveWorkouts(sharedPreferences, date, updatedWorkouts)
         workouts = updatedWorkouts
 
         val muscleStates = loadMuscleState(sharedPreferences, date)
-        workouts.firstOrNull { it.name == name }?.let { workout ->
+        workoutsToDelete.forEach { workout ->
             updateMuscleStatesAfterDeletion(workout, muscleStates)
         }
         saveMuscleState(sharedPreferences, date, muscleStates)
@@ -98,9 +99,7 @@ fun WorkoutHistory(
         val updatedWorkouts = workouts.filterNot { it.name == name }.toMutableList()
 
         sets.forEach { set ->
-            if (set.reps > 0) { // Only add if reps are greater than 0
-                updatedWorkouts.add(Workout(name = name, sets = listOf(set)))
-            }
+            updatedWorkouts.add(Workout(name = name, sets = listOf(set)))
         }
 
         saveWorkouts(sharedPreferences, date, updatedWorkouts)
@@ -257,7 +256,7 @@ fun WorkoutHistory(
 
         AlertDialog(
             onDismissRequest = { showRepsDialog = false },
-            title = { Text("Edit sets for $workoutToUpdate") },
+            title = { Text("Edit sets for $workoutToUpdate", style = MaterialTheme.typography.titleMedium) },
             text = {
                 Column {
                     exerciseSets.forEachIndexed { index, set ->
@@ -270,7 +269,6 @@ fun WorkoutHistory(
                                     set.weight?.toString() ?: ""
                             )
                         }
-
 
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
@@ -334,18 +332,13 @@ fun WorkoutHistory(
                     }
 
                     Button(
-                        onClick = {
-                            if (exerciseSets.size < workouts.filter { it.name == workoutToUpdate }.flatMap { it.sets }.size) {
-                                exerciseSets.add(
-                                    WorkoutSet(
-                                        reps = exerciseSets.lastOrNull()?.reps ?: 0,
-                                        weight = exerciseSets.lastOrNull()?.weight
-                                    )
-                                )
-                            }
+                        onClick = { exerciseSets.add(WorkoutSet(
+                            reps = exerciseSets.lastOrNull()?.reps ?: 1,
+                            weight = exerciseSets.lastOrNull()?.weight )
+                        )
                         },
                         enabled = exerciseSets.size < workouts.filter { it.name == workoutToUpdate }.flatMap { it.sets }.size,
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
                     ) {
                         Text("Add Set")
                     }
@@ -355,7 +348,7 @@ fun WorkoutHistory(
                 Button(
                     onClick = {
                         workoutToUpdate?.let { name ->
-                            handleUpdateReps(name, exerciseSets.filter { it.reps > 0 })
+                            handleUpdateReps(name, exerciseSets)
                         }
                         showRepsDialog = false
                     }

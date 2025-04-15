@@ -140,8 +140,9 @@ fun WorkoutLogApp(sharedViewModel: SharedViewModel, navController: NavHostContro
         )
         workouts.clear()
         workouts.addAll(loadedWorkouts)
-        val savedMuscleStates = loadMuscleState(sharedPreferences, currentDate)
+
         muscleStates.clear()
+        val savedMuscleStates = loadMuscleState(sharedPreferences, currentDate)
         muscleStates.putAll(savedMuscleStates)
 
         workoutMuscleMap.values.map { it.first }.flatten().toSet().forEach { muscle ->
