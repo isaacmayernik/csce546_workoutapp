@@ -78,9 +78,7 @@ data class Workout(
     val name: String,
     val sets: List<WorkoutSet>,
     val weight: Float? = null
-) {
-    val maxReps: Int get() = sets.maxOfOrNull { it.reps } ?: 0
-}
+)
 
 data class WorkoutSet(
     val reps: Int,

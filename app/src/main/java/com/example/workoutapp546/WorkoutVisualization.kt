@@ -51,6 +51,8 @@ val synonymsMap = mapOf(
     "Glute bridge" to "Wide glute bridge",
     "Hammer bicep curls" to "Hammer curl",
     "Incline bench press" to "Incline chest press",
+    "Lying leg curls" to "Leg curls",
+    "Prone leg curls" to "Leg curls",
     "Reverse sit ups" to "Reverse crunch",
     "Seated cable row" to "Cable row",
     "Seated dips" to "Tricep dip",

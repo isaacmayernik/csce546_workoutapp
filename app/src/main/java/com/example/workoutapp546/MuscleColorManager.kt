@@ -61,7 +61,7 @@ val workoutMuscleMap = mapOf(
     ),
     "Cable tricep pushdown" to Pair(
         listOf("tricep", "shoulder-deltoid"),
-        "Lean slightly forward. Keep bar slightly below chest. You want to use your shoulders as little as possible."
+        "Lean slightly forward. Keep bar slightly below chest. Use your shoulders as little as possible."
     ),
     "Calf raises" to Pair(
         listOf("calf"),
@@ -107,6 +107,10 @@ val workoutMuscleMap = mapOf(
         listOf("chest-right", "chest-left", "shoulder-deltoid"),
         "Lock every finger around the handle. Keep back straight the entire time."
     ),
+    "Inner thigh machine" to Pair(
+        listOf("thigh"),
+        "Sit straight. Focus on squeezing the inner thigh."
+    ),
     "Jump rope" to Pair(
         listOf("calf"),
         "Focus on wrist rotation. Keep your core engaged."
@@ -142,6 +146,10 @@ val workoutMuscleMap = mapOf(
     "Neck extension" to Pair(
         listOf("sternocleidomastoid"),
         ""
+    ),
+    "Outer thigh machine" to Pair(
+      listOf("glute", "thigh"),
+        "Sit straight. Focus on pushing out with your glutes."
     ),
     "Overhead dumbbell extension" to Pair(
         listOf("tricep"),
@@ -201,11 +209,11 @@ val workoutMuscleMap = mapOf(
     ),
     "Tricep dip" to Pair(
         listOf("shoulder-deltoid", "tricep"),
-        "You want to use your shoulders as little as possible. Focus on controlled movements bringing it back."
+        "Use your shoulders as little as possible. Focus on controlled movements bringing it back."
     ),
     "Tricep pushdown" to Pair(
         listOf("tricep"),
-        "Lean slightly forward. You want to use your shoulders as little as possible."
+        "Lean slightly forward. Use your shoulders as little as possible."
     ),
     "Wide glute bridge" to Pair(
         listOf("glute"),
