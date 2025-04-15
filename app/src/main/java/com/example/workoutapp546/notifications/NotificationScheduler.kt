@@ -4,7 +4,7 @@ import android.content.Context
 import android.os.Build
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.PeriodicWorkRequestBuilder
-import androidx.work.WorkInfo
+//import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -56,21 +56,21 @@ object NotificationScheduler {
         )
     }
 
-    fun getNextScheduledTime(context: Context, callback: (String) -> Unit) {
-        WorkManager.getInstance(context)
-            .getWorkInfosForUniqueWorkLiveData(WORK_NAME)
-            .observeForever { workInfos ->
-                workInfos.firstOrNull()?.let { info ->
-                    if (info.state == WorkInfo.State.ENQUEUED) {
-                        val nextRunTime = info.nextScheduleTimeMillis
-                        val dateString = getDateFormat().format(nextRunTime)
-                        callback("Next notification: $dateString")
-                    } else {
-                        callback("No scheduled notifications")
-                    }
-                } ?: run {
-                    callback("No scheduled notifications")
-                }
-            }
-    }
+//    fun getNextScheduledTime(context: Context, callback: (String) -> Unit) {
+//        WorkManager.getInstance(context)
+//            .getWorkInfosForUniqueWorkLiveData(WORK_NAME)
+//            .observeForever { workInfos ->
+//                workInfos.firstOrNull()?.let { info ->
+//                    if (info.state == WorkInfo.State.ENQUEUED) {
+//                        val nextRunTime = info.nextScheduleTimeMillis
+//                        val dateString = getDateFormat().format(nextRunTime)
+//                        callback("Next notification: $dateString")
+//                    } else {
+//                        callback("No scheduled notifications")
+//                    }
+//                } ?: run {
+//                    callback("No scheduled notifications")
+//                }
+//            }
+//    }
 }

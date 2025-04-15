@@ -40,15 +40,15 @@ fun Settings(sharedViewModel: SharedViewModel, navController: NavHostController)
     val snackbarHostState = remember { SnackbarHostState() }
     var showSnackbar by remember { mutableStateOf(false) }
     var snackbarMessage by remember { mutableStateOf("") }
-    var nextNotificationTime by remember { mutableStateOf("Calculating...") }
+//    var nextNotificationTime by remember { mutableStateOf("Calculating...") }
 
     var isDarkMode by remember { mutableStateOf(sharedViewModel.isDarkMode) }
 
-    LaunchedEffect(Unit) {
-        NotificationScheduler.getNextScheduledTime(context) { time ->
-            nextNotificationTime = time
-        }
-    }
+//    LaunchedEffect(Unit) {
+//        NotificationScheduler.getNextScheduledTime(context) { time ->
+//            nextNotificationTime = time
+//        }
+//    }
 
     LaunchedEffect(sharedViewModel.isDarkMode) {
         isDarkMode = sharedViewModel.isDarkMode
@@ -180,23 +180,23 @@ fun Settings(sharedViewModel: SharedViewModel, navController: NavHostController)
                 }
             }
 
-            // Next notification time for TESTING
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 8.dp)
-                    .padding(horizontal = 8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = nextNotificationTime,
-                    style = MaterialTheme.typography.titleMedium.copy(
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Medium
-                    ),
-                    modifier = Modifier.weight(1f)
-                )
-            }
+//            // Next notification time for TESTING
+//            Row(
+//                modifier = Modifier
+//                    .fillMaxWidth()
+//                    .padding(vertical = 8.dp)
+//                    .padding(horizontal = 8.dp),
+//                verticalAlignment = Alignment.CenterVertically
+//            ) {
+//                Text(
+//                    text = nextNotificationTime,
+//                    style = MaterialTheme.typography.titleMedium.copy(
+//                        fontSize = 20.sp,
+//                        fontWeight = FontWeight.Medium
+//                    ),
+//                    modifier = Modifier.weight(1f)
+//                )
+//            }
         }
     }
 }
