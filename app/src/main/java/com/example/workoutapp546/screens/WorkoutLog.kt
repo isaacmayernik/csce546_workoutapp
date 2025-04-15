@@ -192,17 +192,10 @@ fun WorkoutLogApp(sharedViewModel: SharedViewModel, navController: NavHostContro
                 }
 
                 val targetSets = currentSets + selectedSets
-                val steps = getColorTransition(currentSets, targetSets)
+                val finalColor = getMuscleColor(targetSets)
 
-                steps.forEach { color ->
-                    animationState = animationState.copy(
-                        currentMuscle = muscle,
-                        currentColor = color
-                    )
-                    muscleStates[muscle] = color
-                    delay(300) // Reduced delay for smoother animation
-                }
-            }
+                muscleStates[muscle] = finalColor
+            } // will immediately update colors
 
             // Save final state
             saveMuscleState(sharedPreferences, currentDate, muscleStates)
@@ -464,19 +457,30 @@ fun WorkoutLogApp(sharedViewModel: SharedViewModel, navController: NavHostContro
                                 workoutHistory.getOrPut(currentDate) { mutableStateListOf() }
                             historyForDate.add(Pair(muscleStates.toMap(), workouts.toList()))
 
+                            // add workouts first
                             routine.workouts.forEach { workout ->
-                                targetSets = workout.sets
-                                animationState = animationState.copy(isAnimating = true)
-
-                                while (animationState.isAnimating) {
-                                    delay(100)
-                                }
-
                                 workouts.add(
                                     Workout(
                                         workout.name,
-                                        List(workout.sets) { WorkoutSet(0) })
+                                        List(workout.sets) { WorkoutSet(0) }
+                                    )
                                 )
+
+                                // then update muscle states immediately
+                                workoutMuscleMap[workout.name]?.first?.forEach { muscle ->
+                                    val currentColor = muscleStates[muscle] ?: Color(0xFF18CB65)
+                                    val currentSets = when (currentColor) {
+                                        Color(0xFF18CB65) -> 0
+                                        Color(0xFFA8E02A) -> 1
+                                        Color(0xFFFFFF2D) -> 2
+                                        Color(0xFFFFD21F) -> 3
+                                        Color(0xFFFFB30A) -> 4
+                                        Color(0xFFCE3135) -> 5
+                                        else -> 0
+                                    }
+                                    val targetSets = currentSets + workout.sets
+                                    muscleStates[muscle] = getMuscleColor(targetSets)
+                                }
                             }
 
                             saveMuscleState(sharedPreferences, currentDate, muscleStates)

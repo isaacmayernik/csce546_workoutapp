@@ -23,10 +23,13 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.Button
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -289,9 +292,14 @@ fun WorkoutDialog(
                                 modifier = Modifier.padding(8.dp)
                             )
                             Text(
-                                text = selectedMuscleGroup
-                                    .replace("-", " ")
-                                    .replaceFirstChar { it.uppercaseChar() },
+                                text = when {
+                                    selectedMuscleGroup.contains("chest-") -> "Chest"
+                                    selectedMuscleGroup == "deltoids-rear" -> "Rear Deltoids"
+                                    selectedMuscleGroup == "back-lower" -> "Lower Back"
+                                    else -> selectedMuscleGroup
+                                        .replace("-", " ")
+                                        .replaceFirstChar { it.uppercaseChar() }
+                                },
                                 style = MaterialTheme.typography.bodyMedium,
                                 modifier = Modifier.padding(start = 8.dp)
                             )
@@ -388,6 +396,7 @@ fun WorkoutDialog(
 }
 
 // Dialog for sorting through muscle groups
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SortByDialog(
     onDismissRequest: () -> Unit,
@@ -407,63 +416,62 @@ fun SortByDialog(
             }
         }
 
-    Dialog(
-        onDismissRequest = onDismissRequest
+    ModalBottomSheet(
+        onDismissRequest = onDismissRequest,
+        sheetState = rememberModalBottomSheetState(),
+        containerColor = MaterialTheme.colorScheme.surface,
+        tonalElevation = 8.dp
     ) {
-        Surface(
-            shape = MaterialTheme.shapes.medium,
-            modifier = Modifier.padding(16.dp),
-        ){
-            Column(
-                modifier = Modifier
-                    .padding(16.dp)
-                    .fillMaxWidth()
+        Column(
+            modifier = Modifier
+                .padding(16.dp)
+                .fillMaxWidth()
+        ) {
+            Text(
+                text= "Sort by muscle group",
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.padding(vertical = 16.dp)
+            )
+
+            LazyColumn(
+                modifier = Modifier.heightIn(max = 300.dp)
             ) {
-                Text(
-                    text= "Sort by muscle group",
-                    style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.padding(bottom = 8.dp)
-                )
-
-                LazyColumn(
-                    modifier = Modifier.heightIn(max = 300.dp)
-                ) {
-                    items(muscleGroups.distinctBy {
-                        when {
-                            it.contains("chest-") -> "chest"
-                            else -> it
-                        }
-                    }) { muscle ->
-                        val formattedMuscle = when {
-                            muscle == "deltoids-rear" -> "Rear Deltoids"
-                            muscle == "back-lower" -> "Lower Back"
-                            muscle.contains("chest-") -> "Chest"
-                            else -> muscle
-                                .replace("-", " ")
-                                .split(" ")
-                                .joinToString(" ") { word ->
-                                    word.replaceFirstChar { it.uppercaseChar() }
-                                }
-                        }
-
-                        Text(
-                            text = formattedMuscle,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable {
-                                    val originalName = when (formattedMuscle) {
-                                        "Chest" -> if (muscle.contains("left")) "chest-left" else "chest-right"
-                                        "Rear Deltoids" -> "deltoids-rear"
-                                        "Lower Back" -> "back-lower"
-                                        else -> muscle
-                                    }
-                                    onMuscleGroupSelected(originalName)
-                                    onDismissRequest()
-                                }
-                                .padding(8.dp),
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
+                items(muscleGroups.distinctBy {
+                    when {
+                        it.contains("chest-") -> "chest"
+                        else -> it
                     }
+                }) { muscle ->
+                    val formattedMuscle = when {
+                        muscle == "deltoids-rear" -> "Rear Deltoids"
+                        muscle == "back-lower" -> "Lower Back"
+                        muscle.contains("chest-") -> "Chest"
+                        else -> muscle
+                            .replace("-", " ")
+                            .split(" ")
+                            .joinToString(" ") { word ->
+                                word.replaceFirstChar { it.uppercaseChar() }
+                            }
+                    }
+
+                    Text(
+                        text = formattedMuscle,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                val originalName = when (formattedMuscle) {
+                                    "Chest" -> if (muscle.contains("left")) "chest-left" else "chest-right"
+                                    "Rear Deltoids" -> "deltoids-rear"
+                                    "Lower Back" -> "back-lower"
+                                    else -> muscle
+                                }
+                                onMuscleGroupSelected(originalName)
+                                onDismissRequest()
+                            }
+                            .padding(12.dp),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
                 }
             }
         }
@@ -471,6 +479,7 @@ fun SortByDialog(
 }
 
 // Dropdown of routines
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RoutineDialog(
     routines: List<Routine>,
@@ -482,59 +491,69 @@ fun RoutineDialog(
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
-    Dialog(onDismissRequest = onDismissRequest) {
-        Surface(
-            shape = MaterialTheme.shapes.medium,
-            modifier = Modifier.padding(16.dp),
+    ModalBottomSheet(
+        onDismissRequest = onDismissRequest,
+        sheetState = rememberModalBottomSheetState(),
+        containerColor = MaterialTheme.colorScheme.surface,
+        tonalElevation = 8.dp
+    ) {
+        Column(
+            modifier = Modifier
+                .padding(16.dp)
+                .fillMaxWidth()
         ) {
-            Column(
-                modifier = Modifier
-                    .padding(16.dp)
-                    .fillMaxWidth()
-            ) {
-                if (routines.isEmpty()) {
-                    Text("No routines found", modifier = Modifier.padding(8.dp))
-                } else {
-                    LazyColumn {
-                        items(routines) { routine ->
-                            var showDelete by remember { mutableStateOf(false) }
+            Text(
+                "Select Routine",
+                style = MaterialTheme.typography.titleLarge,
+                modifier = Modifier.padding(vertical = 16.dp)
+            )
 
-                            SwipeToReveal(
-                                onReveal = { showDelete = true },
-                                onDismiss = { showDelete = false },
-                                content = {
-                                    Text(
-                                        text = routine.name,
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .clickable { onRoutineSelected(routine) }
-                                            .padding(8.dp)
-                                    )
-                                },
-                                actionContent = {
-                                    Box(
-                                        modifier = Modifier
-                                            .fillMaxSize()
-                                            .background(Color.Red)
-                                            .clickable {
-                                                sharedViewModel.removeRoutine(
-                                                    context.getSharedPreferences(
-                                                        "app_prefs",
-                                                        Context.MODE_PRIVATE
-                                                    ),
-                                                    routine
-                                                )
-                                                scope.launch {
-                                                    snackbarHostState.showSnackbar("Routine deleted")
-                                                }
-                                            },
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Text("Delete", color = Color.White)
-                                    }
+            if (routines.isEmpty()) {
+                Text(
+                    "No routines found",
+                    modifier = Modifier.padding(8.dp).fillMaxWidth(),
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            } else {
+                LazyColumn {
+                    items(routines) { routine ->
+                        var showDelete by remember { mutableStateOf(false) }
+
+                        SwipeToReveal(
+                            onReveal = { showDelete = true },
+                            onDismiss = { showDelete = false },
+                            content = {
+                                Text(
+                                    text = routine.name,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable { onRoutineSelected(routine) }
+                                        .padding(8.dp)
+                                )
+                            },
+                            actionContent = {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .background(Color.Red)
+                                        .clickable {
+                                            sharedViewModel.removeRoutine(
+                                                context.getSharedPreferences(
+                                                    "app_prefs",
+                                                    Context.MODE_PRIVATE
+                                                ),
+                                                routine
+                                            )
+                                            scope.launch {
+                                                snackbarHostState.showSnackbar("Routine deleted")
+                                            }
+                                        },
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text("Delete", color = Color.White)
                                 }
-                            )
-                        }
+                            }
+                        )
                     }
                 }
             }
